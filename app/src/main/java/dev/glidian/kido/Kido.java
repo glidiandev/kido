@@ -158,7 +158,7 @@ final class Kido {
         look("com.netflix.ninja", "Netflix", "netflix", Cat.FILM, 0xFFE50914);
         look("com.amazon.amazonvideo.livingroom", "Prime Video", "prime_video", Cat.FILM, 0xFF00A8E1);
         look("com.wbd.stream", "HBO Max", "hbo_max", Cat.SERIES, 0xFF2D55FF);
-        look("com.disney.disneyplus", "Disney+", "disney_plus", Cat.SERIES, 0xFF3B5BFF);
+        look("com.disney.disneyplus", "Disney+", "disney_plus", Cat.FAMILY, 0xFF3B5BFF);
         look("com.google.android.youtube.tv", "YouTube", "youtube", Cat.VIDEO, 0xFFFF2A3D);
         look("com.hulu.livingroomplus", "Hulu", "hulu", Cat.SERIES, 0xFF1CE783);
         look("com.peacocktv.peacockandroid", "Peacock", "peacock", Cat.SERIES, 0xFF7B61FF);
