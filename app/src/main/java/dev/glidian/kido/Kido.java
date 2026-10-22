@@ -1,7 +1,14 @@
 package dev.glidian.kido;
 
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -20,7 +27,7 @@ final class Kido {
     static int LINE;    // amber at 28%
 
     /** Theme names as shown in the settings menu: kanji, English. */
-    static final String[][] THEMES = {{"標準", "STANDARD"}, {"警報", "ALERT"}, {"紫電", "VIOLET"}};
+    static final String[][] THEMES = {{"標準", "ESTÁNDAR"}, {"警報", "ALERTA"}, {"紫電", "VIOLETA"}};
 
     // Per theme: amber (main text and lines), orange (focus fill), red (active tab, alerts), green (OK readouts),
     // lime (inactive tabs), ink (bright text), cream (names), focus rim.
@@ -89,18 +96,21 @@ final class Kido {
     }
 
     static {
-        look("com.netflix.ninja", "Netflix", "映画", "FILM", 0xFFE50914);
-        look("com.amazon.amazonvideo.livingroom", "Prime Video", "映画", "FILM", 0xFF00A8E1);
+        look("com.netflix.ninja", "Netflix", "映画", "CINE", 0xFFE50914);
+        look("com.amazon.amazonvideo.livingroom", "Prime Video", "映画", "CINE", 0xFF00A8E1);
         look("com.wbd.stream", "HBO Max", "番組", "SERIES", 0xFF2D55FF);
-        look("com.disney.disneyplus", "Disney+", "家族", "FAMILY", 0xFF3B5BFF);
+        look("com.disney.disneyplus", "Disney+", "番組", "SERIES", 0xFF3B5BFF);
         look("com.google.android.youtube.tv", "YouTube", "動画", "VIDEO", 0xFFFF2A3D);
         look("com.hulu.livingroomplus", "Hulu", "番組", "SERIES", 0xFF1CE783);
         look("com.peacocktv.peacockandroid", "Peacock", "番組", "SERIES", 0xFF7B61FF);
         look("com.crunchyroll.crunchyroid", "Crunchyroll", "アニメ", "ANIME", 0xFFF47521);
-        look("com.spotify.tv.android", "Spotify", "音楽", "MUSIC", 0xFF1DB954);
-        look("com.valvesoftware.steamlink", "Steam Link", "遊戯", "GAMES", 0xFF66C0F4);
-        look("com.android.vending", "Play Store", "店", "STORE", 0xFF01A971);
-        look("com.mediatek.wwtv.mediaplayer", "Media Player", "再生", "PLAYER", 0xFFFFB21E);
+        look("com.spotify.tv.android", "Spotify", "音楽", "MÚSICA", 0xFF1DB954);
+        look("com.valvesoftware.steamlink", "Steam Link", "遊戯", "JUEGOS", 0xFF66C0F4);
+        look("com.android.vending", "Play Store", "店", "TIENDA", 0xFF01A971);
+        look("com.mediatek.wwtv.mediaplayer", "Media Player", "再生", "REPRODUCTOR", 0xFFFFB21E);
+        look("com.google.android.youtube.tvmusic", "YouTube Music", "音楽", "MÚSICA", 0xFFFF0033);
+        look("com.google.android.youtube.tvkids", "YouTube Kids", "家族", "FAMILIA", 0xFFFF2A3D);
+        look("com.mitv.dream", "Fondos Mi", "写真", "FONDOS", 0xFFFFC23D);
     }
 
     /** The main panels on first run, in order. After that, what's pinned is saved and changed from the remote. */
@@ -125,6 +135,124 @@ final class Kido {
     static Look lookFor(String pkg, String label) {
         Look l = LOOKS.get(pkg);
         return l != null ? l : new Look(label, "アプリ", "APP", AMBER);
+    }
+
+    /**
+     * An app the catalog doesn't know: its category comes from words in its name and package (then from
+     * the category the app declares), and its color from the most distinctive color in its own banner.
+     */
+    static Look lookFor(PackageManager pm, ResolveInfo ri, String pkg, String label) {
+        Look known = LOOKS.get(pkg);
+        if (known != null) return known;
+        String[] cat = categorize(pkg, label, ri.activityInfo.applicationInfo);
+        int color = logoColor(pm, ri, pkg);
+        if (color == 0) color = cat[2] != null ? (int) Long.parseLong(cat[2], 16) : AMBER;
+        return new Look(label, cat[0], cat[1], color);
+    }
+
+    // {kanji, category, fallback color}. The kanji are the ones the Mincho subset in res/font carries.
+    private static final String[] CINE = {"映画", "CINE", "FFE50914"}, SERIES = {"番組", "SERIES", "FF2D55FF"},
+            FAMILIA = {"家族", "FAMILIA", "FF3B5BFF"}, VIDEO = {"動画", "VIDEO", "FFFF2A3D"},
+            ANIME = {"アニメ", "ANIME", "FFF47521"}, MUSICA = {"音楽", "MÚSICA", "FF1DB954"},
+            JUEGOS = {"遊戯", "JUEGOS", "FF66C0F4"}, TIENDA = {"店", "TIENDA", "FF01A971"},
+            REPRODUCTOR = {"再生", "REPRODUCTOR", "FFFFB21E"}, NOTICIAS = {"情報", "NOTICIAS", "FF4FA3FF"},
+            FOTOS = {"写真", "FOTOS", "FFFFC23D"}, PROYECCION = {"映写", "PROYECCIÓN", "FF3BD1C8"},
+            EN_VIVO = {"生放送", "TV EN VIVO", "FFFF5A36"}, HERRAMIENTAS = {"操作", "HERRAMIENTAS", "FF9AA7B0"},
+            NAVEGADOR = {"網", "NAVEGADOR", "FF4FA3FF"}, DEPORTES = {"放送", "DEPORTES", "FF3BD16F"},
+            APP = {"アプリ", "APP", null};
+
+    private static final Object[][] RULES = {
+            {MUSICA, "music", "música", "musica", "spotify", "deezer", "tidal", "radio", "soundcloud", "podcast", "audio"},
+            {ANIME, "crunchyroll", "anime"},
+            {FAMILIA, "kids", "niños", "ninos", "cartoon", "infantil"},
+            {JUEGOS, "game", "juego", "steam", "xbox", "playstation", "geforce", "arcade"},
+            {DEPORTES, "sport", "deporte", "espn", "dazn", "futbol", "fútbol"},
+            {NOTICIAS, "news", "noticias", "dw.com", "cnn", "bbc", "euronews"},
+            {EN_VIVO, "iptv", "xuper", "pluto", "en vivo", "livetv", "live tv", "mgstv"},
+            {PROYECCION, "miracast", "smartshare", "wfd", "milink", "screen mirror", "cast"},
+            {FOTOS, "gallery", "galería", "galeria", "photo", "foto", "wallpaper", "fondos", "carrusel"},
+            {NAVEGADOR, "browser", "navegador", "chrome", "firefox", "opera"},
+            {TIENDA, "store", "tienda", "vending", "aptoide"},
+            {REPRODUCTOR, "player", "reproductor", "vlc", "kodi", "plex", "mediaexplorer", "videoplayer"},
+            {HERRAMIENTAS, "manager", "settings", "ajustes", "files", "archivos", "cleaner", "update"},
+            {CINE, "movies", "películas", "peliculas", "cine", "film", "netflix", "prime video", "disney",
+                    "paramount", "vix", "mubi", "hbo", "apple tv", "videos"},
+            {SERIES, "series", "max", "star+"},
+            {VIDEO, "youtube", "video", "twitch", "vimeo"},
+    };
+
+    private static String[] categorize(String pkg, String label, ApplicationInfo ai) {
+        String hay = (label + " " + pkg).toLowerCase(java.util.Locale.ROOT);
+        for (Object[] rule : RULES) {
+            for (int i = 1; i < rule.length; i++) if (hay.contains((String) rule[i])) return (String[]) rule[0];
+        }
+        if (ai != null) {
+            switch (ai.category) {
+                case ApplicationInfo.CATEGORY_AUDIO: return MUSICA;
+                case ApplicationInfo.CATEGORY_GAME: return JUEGOS;
+                case ApplicationInfo.CATEGORY_VIDEO: return VIDEO;
+                case ApplicationInfo.CATEGORY_IMAGE: return FOTOS;
+                case ApplicationInfo.CATEGORY_NEWS: return NOTICIAS;
+                case ApplicationInfo.CATEGORY_PRODUCTIVITY: return HERRAMIENTAS;
+                default: break;
+            }
+        }
+        return APP;
+    }
+
+    private static final Map<String, Integer> COLOR_CACHE = new HashMap<>();
+
+    /**
+     * The color that stands out in an app's banner (or icon): colorful pixels are grouped by hue, weighted by
+     * how vivid they are, and the strongest group wins. White, black and grey logos give 0, so the category
+     * color is used. The result is brightened a little so it glows on the black screen.
+     */
+    static int logoColor(PackageManager pm, ResolveInfo ri, String pkg) {
+        String key = pkg + ":" + new java.io.File(ri.activityInfo.applicationInfo.sourceDir).lastModified();
+        Integer cached = COLOR_CACHE.get(key);
+        if (cached != null) return cached;
+        int out = 0;
+        try {
+            Drawable d = ri.activityInfo.loadBanner(pm);
+            if (d == null) d = ri.activityInfo.applicationInfo.loadBanner(pm);
+            if (d == null) d = ri.loadIcon(pm);
+            if (d != null) {
+                Bitmap b = Bitmap.createBitmap(64, 36, Bitmap.Config.ARGB_8888);
+                d.setBounds(0, 0, 64, 36);
+                d.draw(new Canvas(b));
+                float[] w = new float[24], r = new float[24], g = new float[24], bl = new float[24], hsv = new float[3];
+                int px = 0;
+                for (int y = 0; y < 36; y++) {
+                    for (int x = 0; x < 64; x++) {
+                        int c = b.getPixel(x, y);
+                        if (Color.alpha(c) < 128) continue;
+                        px++;
+                        Color.colorToHSV(c, hsv);
+                        if (hsv[1] < 0.35f || hsv[2] < 0.25f) continue;
+                        int k = Math.min(23, (int) (hsv[0] / 15f));
+                        float wt = hsv[1] * hsv[2];
+                        w[k] += wt;
+                        r[k] += Color.red(c) * wt;
+                        g[k] += Color.green(c) * wt;
+                        bl[k] += Color.blue(c) * wt;
+                    }
+                }
+                b.recycle();
+                int best = 0;
+                for (int k = 1; k < 24; k++) if (w[k] > w[best]) best = k;
+                if (px > 0 && w[best] > px * 0.03f) {
+                    int c = Color.rgb(Math.round(r[best] / w[best]), Math.round(g[best] / w[best]), Math.round(bl[best] / w[best]));
+                    Color.colorToHSV(c, hsv);
+                    hsv[1] = Math.max(hsv[1], 0.6f);
+                    hsv[2] = Math.max(hsv[2], 0.9f);
+                    out = Color.HSVToColor(hsv);
+                }
+            }
+        } catch (RuntimeException ignored) {
+            out = 0;
+        }
+        COLOR_CACHE.put(key, out);
+        return out;
     }
 
     static int withAlpha(int color, float alpha) {

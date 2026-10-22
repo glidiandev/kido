@@ -36,8 +36,8 @@ public class KidoDream extends DreamService {
             long up = SystemClock.elapsedRealtime() / 1000;
             ActivityManager.MemoryInfo mem = new ActivityManager.MemoryInfo();
             ((ActivityManager) getSystemService(ACTIVITY_SERVICE)).getMemoryInfo(mem);
-            date.setText(new SimpleDateFormat("EEE dd MMM yyyy", Locale.US).format(new Date()).toUpperCase(Locale.ROOT));
-            data.setText(String.format(Locale.ROOT, "UPTIME %02d:%02d:%02d   //   FREE MEM %d MB   //   NO INPUT",
+            date.setText(new SimpleDateFormat("EEE dd MMM yyyy", new Locale("es")).format(new Date()).replace(".", "").toUpperCase(Locale.ROOT));
+            data.setText(String.format(Locale.ROOT, "ACTIVO %02d:%02d:%02d   //   MEM LIBRE %d MB   //   SIN ACTIVIDAD",
                     up / 3600, up / 60 % 60, up % 60, mem.availMem / (1024 * 1024)));
             handler.postDelayed(this, 1000);
         }
@@ -72,7 +72,7 @@ public class KidoDream extends DreamService {
         place(block, new SegClockView(this), 390, 28, 560, 150);
         date = text("", Kido.mono, 24, Kido.DIM, 0.06f);
         place(block, date, 404, 186, -1, -1);
-        place(block, text("STANDBY // KIDŌ v" + versionName(), Kido.condBold, 34, Kido.AMBER, 0.16f), 404, 224, -1, -1);
+        place(block, text("EN ESPERA // KIDŌ v" + versionName(), Kido.condBold, 34, Kido.AMBER, 0.16f), 404, 224, -1, -1);
         View rule = new View(this);
         rule.setBackgroundColor(Kido.withAlpha(Kido.AMBER, 0.6f));
         place(block, rule, 6, 300, W - 6, 4);

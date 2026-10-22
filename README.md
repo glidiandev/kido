@@ -1,181 +1,175 @@
-# 起動 KIDŌ
+# 起動 KIDŌ — edición en español
 
-A command-center home screen for Android TV. A seven-segment clock, big Mincho kanji, a honeycomb of
-channels, live readouts and a status block that lights up in the color of whatever you're on. No ads,
-no rows of recommendations, no internet access at all.
+Una pantalla de inicio estilo "centro de mando" para Android TV: reloj de siete segmentos, kanji Mincho
+grandes, un panal de aplicaciones, lecturas en vivo y un bloque de estado que toma el color de lo que
+tienes seleccionado. Sin anuncios, sin filas de recomendaciones y sin acceso a internet.
 
-![KIDŌ running on a TV: the boot check, the main panels, then the honeycomb and the inputs](docs/kido-preview.gif)
+Esta versión parte de [KIDŌ de Glidian](https://github.com/glidiandev/kido). Tiene la interfaz en
+español y suma funciones nuevas: entradas HDMI con el nombre de la consola conectada, un panel de
+entradas para el botón Input del control, un panal que se desplaza, reordenar apps con MOVER y
+categorías y colores tomados del logo de cada app.
+El detalle de cada cambio, en inglés para el autor original, está en [CHANGES.md](CHANGES.md).
 
-*Recorded on a Sharp AQUOS 4K TV. KIDŌ (起動) means "start up".*
+![Pantalla principal en español](docs/es-inicio.jpg)
 
-**Android TV 8.0+ · 222 KB · no internet permission · free and open source (MIT)**
+**Android TV 8.0+ · ~250 KB · sin permiso de internet · libre y de código abierto (MIT)**
 
-**Try it in your browser:** [glidian.dev/kido/demo](https://glidian.dev/kido/demo/) (arrow keys and Enter are the remote)
+## Qué hay en pantalla
 
-## What's on screen
+- **主要 INICIO.** Tus cinco apps favoritas como tarjetas grandes, con una barra de datos debajo: canal,
+  señal Wi-Fi real, cuándo se actualizó la app y la calidad del enlace.
+- **アプリ APLICACIONES (APPS).** El resto de las apps en un panal. Siempre se ven dos filas completas;
+  al bajar, el panal se desliza para que ninguna fila quede cortada, y un aviso "▲ ▼ MÁS CANALES"
+  indica que hay más. La lista "ESTADO DE ENLACE" de la derecha sigue a la app seleccionada.
+- **制御 SISTEMA.** Tus entradas HDMI, Wi-Fi y Ajustes. Si conectas una consola o un reproductor por
+  HDMI-CEC, el recuadro muestra su nombre (por ejemplo **PLAYSTATION 5**) y "CONECTADO". Al encender
+  algo, aparece el aviso `入力検知 ENTRADA DETECTADA` con el nombre del aparato; OK cambia a esa entrada.
+- **El HUD.** Reloj de siete segmentos, bloque de datos en vivo (memoria libre, tiempo activo, entradas),
+  pestañas de sección y, abajo, un reloj que avanza cada segundo seguido del registro de lo que haces.
+- **Detalles.** Verificación del sistema al encender el TV, secciones que se dibujan al llegar, pantalla
+  de arranque al abrir una app, pitidos suaves, cuadrícula hexagonal y líneas de barrido.
+- **Movimiento fluido.** Las transiciones arrancan de inmediato y frenan suavemente; el brillo que marca
+  la selección viaja en línea recta (también en diagonal) de una app a la siguiente.
+- **KIDŌ En espera.** Un protector de pantalla contra el quemado de pantalla.
 
-- **Main panels.** Your five favorite apps as big cards, with a readout under them: channel, real
-  Wi-Fi strength, when the app last updated, and the link quality.
-- **Network link.** Every other app as a honeycomb, with a link status panel listing them all.
-- **System control.** Your HDMI inputs, Wi-Fi and Settings. Plug something in and an
-  `入力検知 INPUT DETECTED` panel drops in; press OK to switch to it.
-- **The HUD.** A seven-segment clock, a live data block (free memory, uptime, inputs), section tabs
-  and a footer log of what you've been doing.
-- **Little things.** A system check once per TV boot, sections that trace themselves in as you arrive,
-  a launch screen when you open an app, soft console beeps, a faint hex grid and scanlines.
-- **Keeps itself up to date.** Install or remove an app and KIDŌ rebuilds itself. The clock follows your
-  TV's 12 or 24-hour setting.
-- **Easy on the eyes.** Nothing flashes quickly: the input alert pulses slowly, and holding an arrow
-  moves at a steady pace instead of strobing colors across the screen.
-- **KIDŌ Standby.** A screensaver that protects your screen from burn-in (see [below](#screensaver)).
+![El panal de APLICACIONES](docs/es-apps.jpg)
 
-## Themes
+## Categorías y colores de cada app
 
-Three color themes. Hold OK on **Settings** to pick one (and to turn the beeps on or off).
+KIDŌ reconoce el tipo de cada app y le pone su kanji y su categoría: 映画 CINE, 番組 SERIES,
+家族 FAMILIA, 動画 VIDEO, アニメ ANIME, 音楽 MÚSICA, 遊戯 JUEGOS, 店 TIENDA, 再生 REPRODUCTOR,
+情報 NOTICIAS, 写真 FOTOS, 映写 PROYECCIÓN, 生放送 TV EN VIVO, 操作 HERRAMIENTAS, 網 NAVEGADOR y
+放送 DEPORTES. Las apps conocidas (Netflix, Prime Video, Disney+, YouTube, YouTube Music, Spotify…)
+están en un catálogo en `Kido.java`. Las demás se clasifican por palabras de su nombre y paquete, y
+después por la categoría que declara la propia app.
 
-![The same screen in the Standard, Alert and Violet themes](docs/kido-themes.png)
+El color de la línea bajo el nombre, del brillo y del bloque de estado sale del **logo de la app**: KIDŌ
+analiza su banner, agrupa los píxeles de color por tono y elige el más vivo y abundante. Si el logo es
+blanco, negro o gris, usa el color de la categoría.
 
-![Switching themes from the settings menu](docs/kido-theme-switch.gif)
+## Panel de entradas y botón Input
 
-## Screensaver
+![Panel de entradas](docs/es-entradas.jpg)
 
-KIDŌ Standby is a matching screensaver: a big 待機 (standby), the clock and a few live readouts on black.
-The whole block glides to a new spot every 20 seconds and sits slightly dimmed, so nothing stays in one
-place long enough to burn in. That matters most on OLED TVs.
+En muchos televisores el botón **Input** del control abre el panel de entradas del launcher original.
+Si ese launcher está desactivado, el botón deja de hacer algo. KIDŌ trae su propio panel: HDMI (con el
+nombre del aparato si el TV lo conoce), AV y TV, y lo abre desde cualquier app con un pequeño ayudante
+de accesibilidad que solo atiende ese botón. No lee nada de la pantalla.
 
-![KIDŌ Standby: the standby screensaver in the Violet theme](docs/kido-standby.png)
+**Compromiso a tener en cuenta:** en algunos televisores (comprobado en un Xiaomi Mi TV P1), mientras un
+ayudante así está activo, Android deja de repetir el volumen al mantenerlo pulsado: sube un paso por
+pulsación. Por eso KIDŌ trae un interruptor: mantén OK sobre **AJUSTES** y elige
+**BOTÓN INPUT: SÍ / NO**.
 
-Turn it on in Settings > Device Preferences > Screen saver > **KIDŌ Standby**. It uses whichever theme
-KIDŌ is set to, and the TV starts it after the idle time you set there.
+Activarlo por ADB la primera vez:
 
-## Using it
+```
+adb shell pm grant dev.glidian.kido android.permission.WRITE_SECURE_SETTINGS
+adb shell settings put secure enabled_accessibility_services dev.glidian.kido/dev.glidian.kido.InputKeyService
+adb shell settings put secure accessibility_enabled 1
+```
 
-| Remote | What it does |
-|---|---|
-| Arrows | Move around. Left and right run through everything in reading order, from the main panels through the honeycomb to Settings |
-| OK | Open the app or input |
-| Hold OK on an app | Move it, pin it to the main panels, unpin it, or open its app info |
-| Hold OK on Settings | Sound on or off, and the color theme |
-| Back | Return to the main panels |
-| Home | Back to KIDŌ from anywhere, once it's your Home screen |
+El permiso `WRITE_SECURE_SETTINGS` solo sirve para que el interruptor de KIDŌ encienda o apague su propio
+ayudante. Sin él, todo lo demás funciona igual.
 
-## Install
+## Usarlo
 
-> [!NOTE]
-> KIDŌ isn't on the Play Store; you install it yourself with adb. So far it's been tested on one TV
-> (see [Tested on](#tested-on)). Other Android TVs should work, but if something looks off on yours,
-> please open an issue.
+| Control                    | Qué hace                                                                                     |
+| -------------------------- | -------------------------------------------------------------------------------------------- |
+| Flechas                    | Moverse. Arriba desde la primera fila de APPS vuelve a INICIO                                 |
+| OK                         | Abrir la app o la entrada                                                                    |
+| Mantener OK sobre una app  | **MOVER**, fijar en INICIO, quitar de INICIO o ver la información de la app                  |
+| Mantener OK sobre Ajustes  | Sonido, botón Input y tema de color                                                           |
+| Atrás                      | Volver a los paneles principales                                                             |
+| Home                       | Volver a KIDŌ desde cualquier lugar, una vez que es tu pantalla de inicio                    |
+| Input                      | Panel de entradas (si el ayudante está activo)                                               |
 
-You'll need a computer with [adb](https://developer.android.com/tools/releases/platform-tools) and
-the TV on the same network.
+### Mover y ordenar apps
 
-1. On the TV, turn on Developer options (Settings > Device Preferences > About, press OK on
-   **Build** seven times), then turn on **USB debugging** or **Network debugging** in Developer options.
-2. Find the TV's IP address (Settings > Network) and connect:
-   ```bash
-   adb connect 192.168.1.50:5555
-   ```
-   Accept the prompt on the TV.
-3. Download `kido.apk` from [Releases](../../releases) and install it:
-   ```bash
-   adb install kido.apk
-   ```
+1. Mantén OK sobre una app y elige **MOVER**. El menú se cierra y el brillo se pone rojo y parpadea.
+2. Con las flechas la app se desplaza y las demás le hacen sitio (arriba y abajo cambian de fila en el panal).
+3. Desde la primera fila del panal, **arriba** te lleva a INICIO: con izquierda y derecha eliges cuál de
+   los cinco favoritos reemplazar, y la app que sale ocupa el lugar que dejó la que entra.
+4. **OK** guarda el nuevo orden y **Atrás** lo cancela. El orden se conserva tras reiniciar el TV.
 
-KIDŌ now shows up in your apps. To make it what the Home button opens:
+## Instalar
 
-```bash
+KIDŌ no está en Play Store: se instala con adb. Necesitas un computador con
+[adb](https://developer.android.com/tools/releases/platform-tools) en la misma red que el TV.
+
+1. En el TV, activa las Opciones de desarrollador (Ajustes > Preferencias del dispositivo > Información,
+   pulsa OK siete veces sobre **Compilación**) y luego **Depuración USB** o **Depuración por red**.
+2. Busca la IP del TV (Ajustes > Red) y conéctate: `adb connect 192.168.1.50:5555`. Acepta el aviso en el TV.
+3. Compila e instala:
+
+```
+./gradlew assembleDebug
+adb install -r app/build/outputs/apk/debug/app-debug.apk
 adb shell cmd package set-home-activity dev.glidian.kido/.KidoActivity
 ```
 
-Some TVs keep sending Home to the stock launcher anyway. If yours does, switch the stock launcher off
-(this doesn't uninstall anything):
+Si Home sigue abriendo el launcher de fábrica, comprueba primero quién responde a Home y desactiva solo ese:
 
-```bash
+```
+adb shell cmd package query-activities --brief -a android.intent.action.MAIN -c android.intent.category.HOME
 # Android TV
 adb shell pm disable-user --user 0 com.google.android.tvlauncher
-# Google TV
-adb shell pm disable-user --user 0 com.google.android.apps.tv.launcherx
 ```
 
-> [!IMPORTANT]
-> Switching the stock launcher off is safe and easy to undo, but if you ever remove KIDŌ, turn the
-> stock launcher back on **first**. See [Uninstall](#uninstall).
+En el Xiaomi Mi TV P1 el launcher de Google tiene prioridad fija sobre cualquier otro, así que hay que
+desactivarlo. Ese TV también tiene un launcher de pruebas de fábrica (`com.duokan.factorytest`) que
+responde a Home: fija KIDŌ como Home **antes** de desactivar el de Google y no abras esa app.
 
-> [!TIP]
-> Turn on the [KIDŌ Standby screensaver](#screensaver) too, to protect your screen from burn-in.
+Para limpiar el resto de apps preinstaladas, mira [cleanyourtv](https://github.com/Gathin23/cleanyourtv).
 
-## Clean up the rest
+## Desinstalar
 
-If you'd like to clear out the rest of the preinstalled clutter too, take a look at
-[cleanyourtv](https://github.com/Gathin23/cleanyourtv), which has tested debloat lists for a lot of TVs.
+Si desactivaste el launcher original, **vuelve a activarlo primero**, o el TV no tendrá nada que mostrar
+al pulsar Home:
 
-## Uninstall
-
-> [!WARNING]
-> If you switched the stock launcher off, turn it back on **first**. Otherwise the TV is left with
-> nothing to show when you press Home.
-
-Turn the stock launcher back on:
-
-```bash
-# Android TV
+```
 adb shell pm enable com.google.android.tvlauncher
-# Google TV
-adb shell pm enable com.google.android.apps.tv.launcherx
-```
-
-Then remove KIDŌ:
-
-```bash
+adb shell settings delete secure enabled_accessibility_services
 adb uninstall dev.glidian.kido
 ```
 
-If you picked KIDŌ Standby as the screensaver, choose another one in Settings > Device Preferences >
-Screen saver.
+## Privacidad
 
-## Privacy
+KIDŌ no tiene permiso de internet, así que no puede enviar nada. Pide `ACCESS_NETWORK_STATE` y
+`ACCESS_WIFI_STATE` solo para la señal Wi-Fi de las lecturas, y `WRITE_SECURE_SETTINGS` (opcional,
+concedido por ADB) solo para el interruptor del botón Input. El ayudante de accesibilidad solo atiende el
+botón Input y no lee el contenido de la pantalla. Tus favoritos, el orden del panal, el tema y el sonido
+se quedan en el TV.
 
-KIDŌ has no internet permission, so it can't send anything anywhere. It asks for two permissions,
-both only to read the Wi-Fi signal for the readouts: `ACCESS_NETWORK_STATE` and `ACCESS_WIFI_STATE`.
-Your pinned apps, theme and sound setting stay on the TV.
+## Probado en
 
-## Tested on
+| TV                                   | Android       | Notas                                                                                   |
+| ------------------------------------ | ------------- | --------------------------------------------------------------------------------------- |
+| Sharp AQUOS 4K                       | Android TV 11 | Pruebas del proyecto original                                                           |
+| Xiaomi Mi TV P1 (MiTV-MOOQ0, croods) | Android TV 10 | MediaTek m7632, 2 GB. Nombres HDMI-CEC, panel Input (el botón envía `KEYCODE_TV_INPUT`) |
 
-| TV | Android | Notes |
-|---|---|---|
-| Sharp AQUOS 4K | Android TV 11 | 1920x1080 interface; about 70 MB of memory in use, less than the stock launcher |
+## Compilar desde el código
 
-KIDŌ needs Android 8.0 or newer. It's laid out for a 16:9 screen and scales to any resolution. If you
-run it on another TV, an issue or a pull request adding a row here is very welcome.
+Necesitas JDK 17 y el SDK de Android (API 34).
 
-## Build from source
-
-You'll need JDK 17 and the Android SDK (API 34).
-
-```bash
+```
 ./gradlew assembleDebug
-adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-The whole interface is built in code, on a 1920x1080 grid that scales to the real screen. The app
-catalog (names, kanji and brand colors for common apps) and the first-run favorites are in
-`Kido.java`; anything not listed there still shows up, labelled アプリ APP.
+Toda la interfaz se construye en código sobre una cuadrícula de 1920x1080 que se escala a la pantalla
+real. Los textos están en español dentro del código (`KidoActivity.java`, `Kido.java`, `KidoDream.java`,
+`InputPanelActivity.java`); el catálogo de apps y las reglas de categorías están en `Kido.java`.
 
-## Credits
+## Créditos
 
-- KIDŌ started from [cleanyourtv](https://github.com/Gathin23/cleanyourtv) by Gathin, a project for
-  stripping the clutter off Android TVs and building your own home screen. Thank you.
-- Fonts, all under the SIL Open Font License: [Shippori Mincho B1](https://fonts.google.com/specimen/Shippori+Mincho+B1),
-  [Barlow Condensed](https://fonts.google.com/specimen/Barlow+Condensed) and
+- KIDŌ es obra de [Glidian](https://glidian.dev) ([glidiandev/kido](https://github.com/glidiandev/kido)),
+  que a su vez partió de [cleanyourtv](https://github.com/Gathin23/cleanyourtv) de Gathin. Gracias.
+- Tipografías bajo la SIL Open Font License: [Shippori Mincho B1](https://fonts.google.com/specimen/Shippori+Mincho+B1),
+  [Barlow Condensed](https://fonts.google.com/specimen/Barlow+Condensed) y
   [Share Tech Mono](https://fonts.google.com/specimen/Share+Tech+Mono).
-- Inspired by the command-center screens of a certain 90s anime about giant robots and very big feelings.
 
-App names belong to their owners; KIDŌ just uses them as labels.
+Los nombres de las apps pertenecen a sus dueños; KIDŌ solo los usa como etiquetas.
 
-## License
+## Licencia
 
-MIT. See [LICENSE](LICENSE).
-
----
-
-Made by [Glidian](https://glidian.dev).
+MIT. Ver [LICENSE](LICENSE).

@@ -8,6 +8,8 @@
     <!-- Wi-Fi strength and link speed for the signal readouts. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <!-- Only to switch KIDŌ's own Input button helper on and off from its settings menu; granted over ADB. -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
 
     <!-- Android 11+ package visibility: the TV apps KIDŌ shows as panels and hexes. -->
     <queries>
@@ -43,6 +45,38 @@
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- The inputs panel the remote's Input button opens over any app. -->
+        <activity
+            android:name=".InputPanelActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Kido.Panel"
+            android:launchMode="singleTask"
+            android:taskAffinity="dev.glidian.kido.inputs"
+            android:excludeFromRecents="true"
+            android:configChanges="orientation|screenSize|keyboard|keyboardHidden|uiMode"
+            android:screenOrientation="landscape">
+            <!-- The action Android TV uses for "show the inputs"; the TV's own Input key handler names the stock
+                 launcher explicitly, so KIDŌ's key helper covers the button itself. -->
+            <intent-filter>
+                <action android:name="com.android.tv.action.VIEW_INPUTS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- Opt-in key helper for the Input button (enabled over ADB). It reads no screen content. -->
+        <service
+            android:name=".InputKeyService"
+            android:label="@string/input_service_name"
+            android:exported="false"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/input_key_service" />
+        </service>
 
         <!-- The KIDŌ Standby screensaver: Settings > Device Preferences > Screen saver. -->
         <service

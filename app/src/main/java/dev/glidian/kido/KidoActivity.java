@@ -66,12 +66,15 @@ import java.util.function.Consumer;
 public class KidoActivity extends Activity {
     private static final int[][] ZONES = {{0, 0}, {1900, 220}, {720, 1180}};
     private static final String[][] ZONE_NAMES = {
-            {"主要", "MAIN SELECTION", "MAIN"}, {"通信網", "NETWORK LINK", "NETWORK"}, {"制御系統", "SYSTEM CONTROL", "SYSTEM"}};
-    private static final String[] PHASES = {"LINK", "AUTH", "BUFFER", "DECODE", "AUDIO", "VIDEO", "SYNC", "READY"};
+            {"主要", "SELECCIÓN PRINCIPAL", "INICIO"}, {"アプリ", "APLICACIONES", "APPS"}, {"制御系統", "CONTROL DEL SISTEMA", "SISTEMA"}};
+    private static final String[] TAB_KANJI = {"主要", "アプリ", "制御"};
+    private static final String[] PHASES = {"ENLACE", "AUTENT.", "BÚFER", "DECODIF.", "AUDIO", "VIDEO", "SINCRO", "LISTO"};
     private static final long IDLE_MS = 45_000;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final PathInterpolator snap = new PathInterpolator(0.77f, 0f, 0.18f, 1f);
+    // Starts fast and settles softly: the motion answers the remote at once, so the TV feels quick.
+    private final PathInterpolator fluid = new PathInterpolator(0.2f, 0f, 0f, 1f);
 
     private FrameLayout root, board, launch, menu;
     private View glow;
@@ -103,9 +106,17 @@ public class KidoActivity extends Activity {
     private PillsView readPills, detailPills;
     private TextView detailHead, detailRate;
     private final List<TextView> linkRows = new ArrayList<>();
+    private LinearLayout linkList;
+    private android.widget.ScrollView linkBox;
+    private int linkTop;
 
     private final List<View> favViews = new ArrayList<>();
     private final List<HexView> hexViews = new ArrayList<>();
+    // The honeycomb shows two rows at a time and slides up as focus goes down, so no hex is cut off.
+    private static final int HEX_PITCH = 214;
+    private int hiveTop;
+    private boolean hiveMoved;      // the last focus change slid the honeycomb, so the glow travels with it
+    private TextView hiveMore;
     private final List<View> sysViews = new ArrayList<>();
     private final List<App> netApps = new ArrayList<>();
 
@@ -114,6 +125,14 @@ public class KidoActivity extends Activity {
     private TextView alertDetail, ticker, dataValues;
     private final Map<String, TextView> inputMeta = new HashMap<>();
     private final Map<String, String> inputLabels = new HashMap<>();
+    // HDMI ports by input id: the port's own label ("HDMI 1"), its number, and the views that show the device on it.
+    private final Map<String, String> inputPortLabel = new HashMap<>();
+    private final Map<String, Integer> inputPortNo = new HashMap<>();
+    private final Map<String, TextView> inputNameViews = new HashMap<>();
+    private final Map<String, TextView> inputPortViews = new HashMap<>();
+    private final Map<String, String[]> inputStatus = new HashMap<>();
+    private int inputNameWidth;     // room for a device name left of the big port number
+    private final Map<String, String> cecSeen = new HashMap<>();   // port id -> CEC device last seen on it
     private TvInputManager tvInputs;
     private String alertInput;
     private Beeps beeps;
@@ -179,11 +198,17 @@ public class KidoActivity extends Activity {
         root.removeAllViews();
         favViews.clear();
         hexViews.clear();
+        hints.clear();
         sysViews.clear();
         netApps.clear();
         linkRows.clear();
         inputMeta.clear();
         inputLabels.clear();
+        inputPortLabel.clear();
+        inputPortNo.clear();
+        inputNameViews.clear();
+        inputPortViews.clear();
+        inputStatus.clear();
         zone = 0;
         menu = null;
 
@@ -197,6 +222,15 @@ public class KidoActivity extends Activity {
             for (App a : apps) if (a.pkg.equals(pkg)) favs.add(a);
         }
         for (App a : apps) if (!favs.contains(a)) rest.add(a);
+        // The honeycomb keeps the order set with MOVER; apps it has never seen go last, alphabetically.
+        List<String> order = savedOrder();
+        Collections.sort(rest, (a, b) -> {
+            int ia = order.indexOf(a.pkg), ib = order.indexOf(b.pkg);
+            if (ia < 0 && ib < 0) return 0;
+            if (ia < 0) return 1;
+            if (ib < 0) return -1;
+            return ia - ib;
+        });
         int n = 1;
         for (App a : favs) a.ch = String.format(Locale.ROOT, "%02d", n++);
         for (App a : rest) a.ch = String.format(Locale.ROOT, "%02d", n++);
@@ -231,7 +265,7 @@ public class KidoActivity extends Activity {
             Intent i = pm.getLeanbackLaunchIntentForPackage(pkg);
             if (i == null) continue;
             String label = String.valueOf(ri.loadLabel(pm));
-            out.add(new App(pkg, Kido.lookFor(pkg, label), i));
+            out.add(new App(pkg, Kido.lookFor(pm, ri, pkg, label), i));
         }
         Collections.sort(out, (a, b) -> a.look.name.compareToIgnoreCase(b.look.name));
         return out;
@@ -246,7 +280,8 @@ public class KidoActivity extends Activity {
 
         // Console bezel: a thin frame with a green-to-orange accent along the top.
         TraceView frame = new TraceView(this);
-        place(z, frame, 30, 400, 1840, 640);
+        // The frame starts below the section title (kanji and name), so the title never sits on its top line.
+        place(z, frame, 30, 432, 1840, 608);
         zoneFrames[index] = frame;
         View accent = new View(this);
         accent.setBackground(new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
@@ -258,7 +293,7 @@ public class KidoActivity extends Activity {
         g.setAlpha(0f);
         place(z, g, 0, 0, 10, 10);
         zoneGlow[index] = g;
-        place(z, new RulerView(this, ZONES[index][1] + 420), 36, 420, 64, 590);
+        place(z, new RulerView(this, ZONES[index][1] + 440), 36, 446, 64, 580);
 
         String[] names = ZONE_NAMES[index];
         LinearLayout title = row();
@@ -272,7 +307,7 @@ public class KidoActivity extends Activity {
     }
 
     private void buildMain(FrameLayout z, List<App> favs) {
-        TextView tag = counter(0, "FAVORITES // %02d LOADED", favs.size());
+        TextView tag = counter(0, "FAVORITOS // %02d CARGADOS", favs.size());
         tag.setGravity(Gravity.END);
         place(z, tag, 1100, 376, 700, -1);
 
@@ -294,11 +329,11 @@ public class KidoActivity extends Activity {
         readPills = new PillsView(this, 20);
         read.addView(readPills, new LinearLayout.LayoutParams(Kido.px(300), Kido.px(26)));
         read.addView(gap(46));
-        read.addView(text("UPDATED ", Kido.mono, 25, Kido.DIM, 0));
+        read.addView(text("ACTUALIZ. ", Kido.mono, 25, Kido.DIM, 0));
         readUpdated = text("", Kido.mono, 25, Kido.INK, 0);
         read.addView(readUpdated);
         read.addView(gap(46));
-        read.addView(text("LINK ", Kido.mono, 25, Kido.DIM, 0));
+        read.addView(text("SEÑAL ", Kido.mono, 25, Kido.DIM, 0));
         readLink = text("", Kido.mono, 25, Kido.GREEN, 0);
         read.addView(readLink);
         read.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1f));
@@ -307,9 +342,9 @@ public class KidoActivity extends Activity {
         read.addView(readName);
         place(z, read, 122, 880, 1676, 74);
 
-        place(z, text("▼ 制御 SYSTEM", Kido.condBold, 26, Kido.DIM, 0.14f), 122, 966, -1, -1);
+        place(z, text("▼ 制御 SISTEMA", Kido.condBold, 26, Kido.DIM, 0.14f), 122, 966, -1, -1);
         place(z, hint(), 760, 970, 400, -1);
-        TextView right = text("通信 NETWORK ▶", Kido.condBold, 26, Kido.DIM, 0.14f);
+        TextView right = text("アプリ APPS ▶", Kido.condBold, 26, Kido.DIM, 0.14f);
         right.setGravity(Gravity.END);
         place(z, right, 1300, 966, 500, -1);
     }
@@ -342,9 +377,9 @@ public class KidoActivity extends Activity {
         GlowView stripe = new GlowView(this, Kido.px(14), false);
         stripe.setColor(app.look.glow);
         place(c, stripe, 10, 286, 296, 38);
-        TextView ready = text("READY", Kido.mono, 22, Kido.DIM, 0);
+        TextView ready = text("LISTO", Kido.mono, 22, Kido.DIM, 0);
         place(c, ready, 24, 326, -1, -1);
-        TextView ads = text("ADS 0", Kido.mono, 22, Kido.DIM, 0);
+        TextView ads = text("ANUNC. 0", Kido.mono, 22, Kido.DIM, 0);
         ads.setGravity(Gravity.END);
         place(c, ads, 160, 326, 132, -1);
 
@@ -373,7 +408,7 @@ public class KidoActivity extends Activity {
     }
 
     private void buildNetwork(FrameLayout z, List<App> rest) {
-        TextView tag = counter(1, "CHANNELS // %02d ONLINE", rest.size());
+        TextView tag = counter(1, "CANALES // %02d EN LÍNEA", rest.size());
         tag.setGravity(Gravity.END);
         place(z, tag, 1100, 376, 700, -1);
 
@@ -399,6 +434,11 @@ public class KidoActivity extends Activity {
             rowIndex++;
         }
 
+        hiveMore = text("", Kido.condBold, 26, Kido.DIM, 0.14f);
+        hiveMore.setGravity(Gravity.END);
+        place(z, hiveMore, 900, 966, 500, -1);
+        scrollHive(0, false);
+
         // Link status panel: every channel in the honeycomb, plus a detail block for the focused one.
         FrameLayout panel = new FrameLayout(this);
         panel.setBackground(box(Kido.PANEL, Kido.LINE, 2));
@@ -406,7 +446,7 @@ public class KidoActivity extends Activity {
         head.setGravity(Gravity.BOTTOM);
         head.addView(text("回線", Kido.mincho, 28, Kido.AMBER, 0));
         head.addView(gap(10));
-        head.addView(text("LINK STATUS", Kido.condBold, 26, Kido.AMBER, 0.14f));
+        head.addView(text("ESTADO DE ENLACE", Kido.condBold, 26, Kido.AMBER, 0.14f));
         place(panel, head, 26, 22, -1, -1);
         LinearLayout list = new LinearLayout(this);
         list.setOrientation(LinearLayout.VERTICAL);
@@ -418,7 +458,17 @@ public class KidoActivity extends Activity {
             list.addView(r);
             linkRows.add(r);
         }
-        place(panel, list, 26, 70, 318, 300);
+        // The list scrolls inside a fixed window so the focused channel is never the clipped last line.
+        // A ScrollView only to measure the list at full height and clip it; it never takes focus or scrolls itself.
+        linkBox = new android.widget.ScrollView(this);
+        linkBox.setFocusable(false);
+        linkBox.setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS);
+        linkBox.setVerticalScrollBarEnabled(false);
+        linkBox.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        linkBox.addView(list, new FrameLayout.LayoutParams(-1, -2));
+        linkList = list;
+        linkTop = 0;
+        place(panel, linkBox, 26, 70, 318, 290);
         View sep = new View(this);
         sep.setBackgroundColor(Kido.LINE);
         place(panel, sep, 0, 370, 370, 2);
@@ -432,7 +482,7 @@ public class KidoActivity extends Activity {
         place(panel, detailRate, 130, 452, 220, -1);
         place(z, panel, 1430, 452, 370, 500);
 
-        place(z, text("◀ 主要 MAIN", Kido.condBold, 26, Kido.DIM, 0.14f), 122, 966, -1, -1);
+        place(z, text("◀ 主要 INICIO", Kido.condBold, 26, Kido.DIM, 0.14f), 122, 966, -1, -1);
         place(z, hint(), 760, 970, 400, -1);
     }
 
@@ -441,26 +491,39 @@ public class KidoActivity extends Activity {
         TvInputManager tim = (TvInputManager) getSystemService(TV_INPUT_SERVICE);
         if (tim != null) {
             List<TvInputInfo> inputs = new ArrayList<>();
+            List<String> hdmiIds = new ArrayList<>();
             for (TvInputInfo info : tim.getTvInputList()) {
-                if (info.isPassthroughInput() && info.getType() == TvInputInfo.TYPE_HDMI) inputs.add(info);
+                if (info.isPassthroughInput() && info.getType() == TvInputInfo.TYPE_HDMI) hdmiIds.add(info.getId());
+            }
+            // An HDMI-CEC device (a console, a player) is its own input whose parent is the HDMI port it is
+            // plugged into. Only the ports become boxes; the devices name them.
+            for (TvInputInfo info : tim.getTvInputList()) {
+                if (!info.isPassthroughInput() || info.getType() != TvInputInfo.TYPE_HDMI) continue;
+                String parent = info.getParentId();
+                if (parent == null || !hdmiIds.contains(parent)) inputs.add(info);
             }
             Collections.sort(inputs, (a, b) -> String.valueOf(a.loadLabel(this)).compareToIgnoreCase(String.valueOf(b.loadLabel(this))));
             int port = 1;
             for (TvInputInfo info : inputs) {
                 String label = String.valueOf(info.loadLabel(this)).toUpperCase(Locale.ROOT);
                 if (!label.contains("HDMI")) label = "HDMI " + label;
-                boolean linked = tim.getInputState(info.getId()) == TvInputManager.INPUT_STATE_CONNECTED;
+                boolean linked = tim.getInputState(info.getId()) == TvInputManager.INPUT_STATE_CONNECTED
+                        || cecDeviceOn(tim, info.getId()) != null;
                 String num = label.replaceAll("[^0-9]", "");
-                entries.add(new String[]{label, num.isEmpty() ? String.valueOf(port) : num,
-                        "PORT " + port, linked ? "LINKED" : "EMPTY", info.getId()});
+                inputPortLabel.put(info.getId(), label);
+                inputPortNo.put(info.getId(), port);
+                cecSeen.put(info.getId(), cecDeviceOn(tim, info.getId()));
+                String dev = deviceOn(tim, info.getId());
+                entries.add(new String[]{dev != null ? dev : label, num.isEmpty() ? String.valueOf(port) : num,
+                        dev != null ? label : "PUERTO " + port, linked ? "CONECTADO" : "LIBRE", info.getId()});
                 port++;
             }
         }
         inputCount = entries.size();
-        entries.add(new String[]{"WI-FI", "", "HOME", "NETWORK", null});
-        entries.add(new String[]{"SETTINGS", "", "SYSTEM", "CONFIG", null});
+        entries.add(new String[]{"WI-FI", "", "HOGAR", "RED", null});
+        entries.add(new String[]{"AJUSTES", "", "SISTEMA", "CONFIG.", null});
 
-        TextView tag = counter(2, "EXTERNAL INPUT // %d PORTS", inputCount);
+        TextView tag = counter(2, "ENTRADAS EXTERNAS // %d PUERTOS", inputCount);
         tag.setGravity(Gravity.END);
         place(z, tag, 1100, 376, 700, -1);
 
@@ -471,7 +534,7 @@ public class KidoActivity extends Activity {
             boolean isInput = i < inputCount;
             String jp = isInput ? "入力" : i == inputCount ? "無線" : "設定";
             String kanji = isInput ? "入力" : i == inputCount ? "通信" : "設定";
-            String en = isInput ? "INPUT" : i == inputCount ? "WIRELESS" : "SETTINGS";
+            String en = isInput ? "ENTRADA" : i == inputCount ? "INALÁMBRICO" : "AJUSTES";
             FrameLayout box = new FrameLayout(this);
             box.setFocusable(true);
             box.setClickable(true);
@@ -480,6 +543,9 @@ public class KidoActivity extends Activity {
             TextView k = text(jp, Kido.mincho, 54, Kido.AMBER, 0);
             place(box, k, 24, 18, -1, -1);
             TextView label = text(e[0], Kido.condBold, 30, Kido.CREAM, 0.12f);
+            label.setSingleLine(true);
+            inputNameWidth = Kido.px(w - 170);
+            fitLine(label, isInput ? inputNameWidth : Kido.px(w - 40));
             place(box, label, 24, 90, (int) w - 40, -1);
             TextView num = text(e[1], Kido.condBold, 150, Kido.GREEN, 0);
             num.setShadowLayer(Kido.px(18), 0, 0, Kido.withAlpha(Kido.GREEN, 0.55f));
@@ -496,19 +562,23 @@ public class KidoActivity extends Activity {
 
             final String inputId = e[4];
             final int idx = i;
+            String[] status = {kanji, en, e[0] + " // " + e[2], e[3]};
             if (inputId != null) {
                 inputMeta.put(inputId, mr);
                 inputLabels.put(inputId, e[0]);
+                inputNameViews.put(inputId, label);
+                inputPortViews.put(inputId, ml);
+                inputStatus.put(inputId, status);
             }
             if (i == n - 1) box.setOnLongClickListener(v -> {
                 settingsMenu(v);
                 return true;
             });
-            box.setTag(new Item(2, null, -1, new String[]{kanji, en, e[0] + " // " + e[2], e[3]}));
+            box.setTag(new Item(2, null, -1, status));
             box.setOnClickListener(v -> {
                 if (inputId != null) openInput(inputId, e[0]);
-                else if (idx == inputCount) openSystem(Settings.ACTION_WIFI_SETTINGS, "無線", "OPENING WI-FI");
-                else openSystem(Settings.ACTION_SETTINGS, "設定", "OPENING SETTINGS");
+                else if (idx == inputCount) openSystem(Settings.ACTION_WIFI_SETTINGS, "無線", "ABRIENDO WI-FI");
+                else openSystem(Settings.ACTION_SETTINGS, "設定", "ABRIENDO AJUSTES");
             });
             box.setOnFocusChangeListener((v, has) -> {
                 bg.setColor(has ? Kido.GREEN : Kido.PANEL);
@@ -532,10 +602,10 @@ public class KidoActivity extends Activity {
         strip.setGravity(Gravity.CENTER_VERTICAL);
         strip.setBackground(box(Kido.PANEL, Kido.LINE, 2));
         strip.setPadding(Kido.px(28), 0, Kido.px(28), 0);
-        toast = text("待機中   STANDBY. SELECT A SOURCE OR SETTING.   HOLD OK ON SETTINGS FOR SOUND AND THEME.", Kido.mono, 25, Kido.INK, 0);
+        toast = text("待機中   EN ESPERA. ELIGE UNA FUENTE O UN AJUSTE.   MANTÉN OK EN AJUSTES PARA SONIDO Y TEMA.", Kido.mono, 25, Kido.INK, 0);
         strip.addView(toast);
         place(z, strip, 122, 830, 1676, 74);
-        place(z, text("▲ 主要 MAIN", Kido.condBold, 26, Kido.DIM, 0.14f), 122, 940, -1, -1);
+        place(z, text("▲ 主要 INICIO", Kido.condBold, 26, Kido.DIM, 0.14f), 122, 940, -1, -1);
     }
 
     /** Explicit moves at section edges, so the remote always lands where the arrows on screen point. */
@@ -555,7 +625,8 @@ public class KidoActivity extends Activity {
         }
         for (HexView h : hexViews) {
             int row = ((Item) h.getTag()).row;
-            if (row == 0) h.setNextFocusUpId(h.getId());
+            // Up from the first row goes back to the main panels.
+            if (row == 0) h.setNextFocusUpId(favViews.isEmpty() ? h.getId() : favViews.get(favViews.size() - 1).getId());
             boolean lastRow = hexViews.get(hexViews.size() - 1).getTag() == h.getTag()
                     || ((Item) hexViews.get(hexViews.size() - 1).getTag()).row == row;
             if (lastRow && !sysViews.isEmpty()) h.setNextFocusDownId(sysViews.get(sysViews.size() - 1).getId());
@@ -613,13 +684,13 @@ public class KidoActivity extends Activity {
         jp.setPadding(Kido.px(10), Kido.px(2), Kido.px(10), Kido.px(4));
         lab.addView(jp);
         lab.addView(gap(16));
-        lab.addView(text("LOCAL TIME:", Kido.condBold, 26, Kido.INK, 0.12f));
+        lab.addView(text("HORA LOCAL:", Kido.condBold, 26, Kido.INK, 0.12f));
         place(hud, lab, 100, 54, -1, -1);
         place(hud, new SegClockView(this), 86, 98, 680, 164);
         dateText = text(dateLine(), Kido.mono, 26, Kido.DIM, 0.06f);
         place(hud, dateText, 100, 268, -1, -1);
 
-        TextView dataLabels = text("SYS-CHK\nFREE MEM\nUPTIME\nINPUTS", Kido.mono, 17, Kido.DIM, 0.06f);
+        TextView dataLabels = text("VERIF.\nMEM LIBRE\nACTIVO\nENTRADAS", Kido.mono, 17, Kido.DIM, 0.06f);
         dataLabels.setLineSpacing(Kido.px(6), 1f);
         place(hud, dataLabels, 800, 76, -1, -1);
         dataValues = text("", Kido.mono, 17, Kido.INK, 0.06f);
@@ -630,7 +701,7 @@ public class KidoActivity extends Activity {
             FrameLayout tab = new FrameLayout(this);
             tabBg[i] = box(Kido.withAlpha(Kido.GREEN, 0.1f), Kido.withAlpha(Kido.GREEN, 0.45f), 2);
             tab.setBackground(tabBg[i]);
-            tabText[i * 2] = text(ZONE_NAMES[i][0].substring(0, 2), Kido.mincho, 22, Kido.withAlpha(Kido.LIME, 0.75f), 0);
+            tabText[i * 2] = text(TAB_KANJI[i], Kido.mincho, 22, Kido.withAlpha(Kido.LIME, 0.75f), 0);
             tabText[i * 2 + 1] = text(ZONE_NAMES[i][2], Kido.condBold, 22, Kido.withAlpha(Kido.LIME, 0.85f), 0.12f);
             place(tab, tabText[i * 2], 12, 6, -1, -1);
             place(tab, tabText[i * 2 + 1], 12, 38, -1, -1);
@@ -646,7 +717,7 @@ public class KidoActivity extends Activity {
         plate.setBackground(plateBg);
         plateKanji = text("映画", Kido.mincho, 104, 0xFF0A0505, 0);
         place(plate, plateKanji, 26, 6, 470, -1);
-        plateEn = text("FILM", Kido.condBold, 38, 0xFF0A0505, 0.1f);
+        plateEn = text("CINE", Kido.condBold, 38, 0xFF0A0505, 0.1f);
         place(plate, plateEn, 30, 136, 470, -1);
         place(plate, new Stripes(this, 0x8C000000), 490, 0, 150, 196);
         plateHalo = new GlowView(this, Kido.px(60), false);
@@ -658,8 +729,9 @@ public class KidoActivity extends Activity {
         subBg = box(0xE6040404, plateColor, 2);
         sub.setBackground(subBg);
         subLeft = text("", Kido.condBold, 30, Kido.CREAM, 0.1f);
+        subLeft.setSingleLine(true);
         place(sub, subLeft, 22, 12, 470, -1);
-        subRight = text("READY", Kido.mono, 22, Kido.DIM, 0);
+        subRight = text("LISTO", Kido.mono, 22, Kido.DIM, 0);
         subRight.setGravity(Gravity.END);
         place(sub, subRight, 460, 18, 158, -1);
         place(hud, sub, 1180, 262, 640, 64);
@@ -675,7 +747,7 @@ public class KidoActivity extends Activity {
         ticker = text("", Kido.mono, 18, Kido.DIM, 0.06f);
         ticker.setSingleLine(true);
         place(hud, ticker, 430, 1050, 860, -1);
-        footerZone = text("SEC-01 // MAIN", Kido.mono, 20, Kido.DIM, 0.08f);
+        footerZone = text("SEC-01 // INICIO", Kido.mono, 20, Kido.DIM, 0.08f);
         footerZone.setGravity(Gravity.END);
         place(hud, footerZone, 1300, 1050, 520, -1);
         showTabs(0);
@@ -702,8 +774,9 @@ public class KidoActivity extends Activity {
 
     private void focused(View v) {
         lastFocused = v;
-        glowBehind(v);
         Item item = (Item) v.getTag();
+        hiveMoved = item.zone == 1 && item.app != null && scrollHive(item.row, true);
+        glowBehind(v);
         boolean byKey = SystemClock.uptimeMillis() - lastKeyAt < 400;
         boolean newZone = item.zone != zone;
         if (newZone) {
@@ -731,22 +804,23 @@ public class KidoActivity extends Activity {
 
     private void showStatus(View v) {
         Item item = (Item) v.getTag();
-        if (item.app != null) log("FOCUS CH." + item.app.ch + " " + item.app.look.name.toUpperCase(Locale.ROOT));
-        else if (item.status != null) log("FOCUS " + item.status[2]);
+        if (item.app != null) log("FOCO CH." + item.app.ch + " " + item.app.look.name.toUpperCase(Locale.ROOT));
+        else if (item.status != null) log("FOCO " + item.status[2]);
         if (item.app != null) {
             App a = item.app;
-            setStatus(a.look.kanji, a.look.category, a.look.name.toUpperCase(Locale.ROOT) + " // CH." + a.ch, "READY", a.look.glow);
+            setStatus(a.look.kanji, a.look.category, a.look.name.toUpperCase(Locale.ROOT) + " // CH." + a.ch, "LISTO", a.look.glow);
             if (item.zone == 0) {
                 readCh.setText(a.ch);
                 readUpdated.setText(updatedOn(a.pkg));
-                readName.setText("LAUNCH " + a.look.name.toUpperCase(Locale.ROOT));
+                readName.setText("ABRIR " + a.look.name.toUpperCase(Locale.ROOT));
             } else {
+                scrollLinkList(a);
                 for (TextView r : linkRows) {
                     boolean on = r.getTag() == a;
                     r.setTextColor(on ? Kido.INK : Kido.DIM);
                     r.setText((on ? "▶ " : "  ") + "CH." + ((App) r.getTag()).ch + " " + ((App) r.getTag()).look.name.toUpperCase(Locale.ROOT));
                 }
-                detailHead.setText("CH." + a.ch + " // LINK OK");
+                detailHead.setText("CH." + a.ch + " // ENLACE OK");
             }
         } else if (item.status != null) {
             int color = item.status[0].equals("入力") ? 0xFFB46CFF : item.status[0].equals("通信") ? Kido.GREEN : Kido.AMBER;
@@ -769,15 +843,78 @@ public class KidoActivity extends Activity {
             g.setLayoutParams(gp);
         }
         g.setColor(Kido.withAlpha(item.zone == 2 ? Kido.GREEN : Kido.ORANGE, 0.7f));
-        g.setTranslationX(vp.leftMargin - pad);
-        g.setTranslationY(vp.topMargin - pad - lift);
+        float gx = vp.leftMargin - pad;
+        float gy = vp.topMargin - pad - lift + (item.zone == 1 ? -Kido.px(hiveTop * HEX_PITCH) : 0);
+        if (moving != null) g.setColor(Kido.withAlpha(Kido.WARN, 0.85f));
+        if (g.getAlpha() > 0.05f) {
+            // The glow slides straight from the last tile to the new one, diagonals included, moving X and Y
+            // together (and with the honeycomb when it scrolls). While moving an app its alpha pulses instead.
+            android.view.ViewPropertyAnimator a = g.animate().translationX(gx).translationY(gy)
+                    .setDuration(hiveMoved ? 340 : 240).setInterpolator(fluid);
+            if (moving == null) a.alpha(1f);
+            a.start();
+            return;
+        }
+        g.animate().cancel();
+        g.setTranslationX(gx);
+        g.setTranslationY(gy);
         g.animate().alpha(1f).setDuration(220).start();
+    }
+
+    /**
+     * Slides the honeycomb so the focused row is fully on screen: two rows show at a time, the rows above
+     * fade out under the section title and the ones below wait off screen, with a hint that there are more.
+     */
+    private boolean scrollHive(int row, boolean animate) {
+        if (hexViews.isEmpty()) return false;
+        int lastRow = ((Item) hexViews.get(hexViews.size() - 1).getTag()).row;
+        int top = Math.max(0, Math.min(row - 1, lastRow - 1));
+        boolean moved = top != hiveTop;
+        hiveTop = top;
+        float shift = -Kido.px(top * HEX_PITCH);
+        for (HexView h : hexViews) {
+            int r = ((Item) h.getTag()).row;
+            float alpha = r >= top && r <= top + 1 ? 1f : 0f;
+            if (animate) {
+                h.animate().translationX(0).translationY(shift).alpha(alpha).setDuration(340)
+                        .setInterpolator(fluid).withLayer().start();
+            } else {
+                h.setTranslationX(0);
+                h.setTranslationY(shift);
+                h.setAlpha(alpha);
+            }
+        }
+        if (hiveMore != null) {
+            boolean above = top > 0, below = top + 1 < lastRow;
+            hiveMore.setText(above || below ? (above ? "▲ " : "") + (below ? "▼ " : "") + "MÁS CANALES" : "");
+        }
+        return moved;
+    }
+
+    /** Keeps the focused channel inside the link status list, with a line of context above and below. */
+    private void scrollLinkList(App a) {
+        if (linkList == null || linkBox == null || linkRows.isEmpty()) return;
+        int rowH = linkRows.get(0).getHeight();
+        int boxH = linkBox.getHeight();
+        if (rowH <= 0 || boxH <= 0) return;
+        int visible = Math.max(1, boxH / rowH);
+        int n = linkRows.size();
+        int i = 0;
+        while (i < n && linkRows.get(i).getTag() != a) i++;
+        if (i >= n || n <= visible) {
+            linkTop = 0;
+        } else {
+            if (i < linkTop + 1) linkTop = i - 1;
+            if (i > linkTop + visible - 2) linkTop = i - visible + 2;
+            linkTop = Math.max(0, Math.min(linkTop, n - visible));
+        }
+        linkList.animate().translationY(-linkTop * rowH).setDuration(260).setInterpolator(fluid).start();
     }
 
     private void moveTo(int z) {
         zone = z;
         board.animate().translationX(-Kido.px(ZONES[z][0])).translationY(-Kido.px(ZONES[z][1]))
-                .setDuration(800).setInterpolator(snap).start();
+                .setDuration(620).setInterpolator(fluid).start();
         showTabs(z);
         footerZone.setText("SEC-0" + (z + 1) + " // " + ZONE_NAMES[z][2]);
         log("SECTOR 0" + (z + 1) + " " + ZONE_NAMES[z][1]);
@@ -824,6 +961,18 @@ public class KidoActivity extends Activity {
         }
     }
 
+    /** Long names are shortened with "…" before the " // CH.xx" part, so the status line stays on one line. */
+    private String fitStatus(String s) {
+        int max = Kido.px(428);
+        android.text.TextPaint p = subLeft.getPaint();
+        if (p.measureText(s) <= max) return s;
+        int cut = s.lastIndexOf(" // ");
+        String tail = cut > 0 ? s.substring(cut) : "";
+        String head = cut > 0 ? s.substring(0, cut) : s;
+        while (head.length() > 1 && p.measureText(head.trim() + "…" + tail) > max) head = head.substring(0, head.length() - 1);
+        return head.trim() + "…" + tail;
+    }
+
     private void setStatus(String kanji, String en, String left, String right, int color) {
         if (!kanji.equals(plateKanji.getText().toString()) || !en.equals(plateEn.getText().toString())) {
             plateKanji.setText(kanji);
@@ -832,7 +981,7 @@ public class KidoActivity extends Activity {
             plateKanji.setTranslationX(-Kido.px(14));
             plateKanji.animate().alpha(1f).translationX(0).setDuration(300).start();
         }
-        subLeft.setText(left);
+        subLeft.setText(fitStatus(left));
         subRight.setText(right);
         if (color == plateColor) return;
         ValueAnimator anim = ValueAnimator.ofObject(new ArgbEvaluator(), plateColor, color);
@@ -879,7 +1028,7 @@ public class KidoActivity extends Activity {
         TextView circuit = text("第" + app.ch + "回線", Kido.mincho, 64, 0xFFFFFFFF, 0);
         circuit.setTextScaleX(0.8f);
         side.addView(circuit);
-        side.addView(text("LAUNCH SEQUENCE // " + app.look.category, Kido.condBold, 30, glowColor, 0.16f));
+        side.addView(text("INICIANDO // " + app.look.category, Kido.condBold, 30, glowColor, 0.16f));
         top.addView(side);
         left.addView(top);
         TextView name = text(app.look.name.toUpperCase(Locale.ROOT), Kido.mincho, 130, 0xFFFFFFFF, 0);
@@ -903,7 +1052,7 @@ public class KidoActivity extends Activity {
             sd.setColor(0xFF3A0006);
             slot.setBackground(sd);
             r.addView(slot, new LinearLayout.LayoutParams(0, Kido.px(22), 1f));
-            TextView st = text("  WAIT", Kido.mono, 20, Kido.withAlpha(glowColor, 0.4f), 0);
+            TextView st = text(" ESPERA", Kido.mono, 20, Kido.withAlpha(glowColor, 0.4f), 0);
             r.addView(st, new LinearLayout.LayoutParams(Kido.px(80), -2));
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
             lp.bottomMargin = Kido.px(9);
@@ -922,7 +1071,7 @@ public class KidoActivity extends Activity {
         launch.setAlpha(0f);
         launch.animate().alpha(1f).setDuration(150).start();
         beeps.launch();
-        log("LAUNCH CH." + app.ch + " " + app.look.name.toUpperCase(Locale.ROOT));
+        log("ABRIR CH." + app.ch + " " + app.look.name.toUpperCase(Locale.ROOT));
 
         for (int i = 0; i < PHASES.length; i++) {
             final int k = i;
@@ -936,7 +1085,7 @@ public class KidoActivity extends Activity {
     }
 
     private void openInput(String inputId, String label) {
-        flashToast("切替", "SWITCHING TO " + label + " ...");
+        flashToast("切替", "CAMBIANDO A " + label + " ...");
         Uri uri = TvContract.buildChannelUriForPassthroughInput(inputId);
         open(new Intent(Intent.ACTION_VIEW).setDataAndType(uri, "vnd.android.cursor.item/channel"));
     }
@@ -956,7 +1105,7 @@ public class KidoActivity extends Activity {
             startActivity(i);
         } catch (ActivityNotFoundException e) {
             launch.setVisibility(View.GONE);
-            Toast.makeText(this, "Can't open that here", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "No se puede abrir aquí", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -964,8 +1113,8 @@ public class KidoActivity extends Activity {
 
     private final Runnable goIdle = () -> {
         idle = true;
-        setStatus("待機", "STANDBY", "HOLDING // NO INPUT", "IDLE", Kido.AMBER);
-        log("STANDBY // NO INPUT");
+        setStatus("待機", "EN ESPERA", "EN ESPERA // SIN ACTIVIDAD", "INACTIVO", Kido.AMBER);
+        log("EN ESPERA // SIN ACTIVIDAD");
     };
 
     @Override
@@ -981,6 +1130,22 @@ public class KidoActivity extends Activity {
         if (menu != null && event.getKeyCode() == KeyEvent.KEYCODE_BACK) {
             if (up) closeMenu();
             return true;
+        }
+        if (moving != null && menu == null) {
+            int k = event.getKeyCode();
+            if (isArrow(k)) {
+                long now = SystemClock.uptimeMillis();
+                if (down && (event.getRepeatCount() == 0 || now - lastMoveAt >= HOLD_STEP_MS * 2)) {
+                    lastMoveAt = now;
+                    if (swapAt >= 0) swapStep(k);
+                    else moveStep(k);
+                }
+                return true;
+            }
+            if (k == KeyEvent.KEYCODE_DPAD_CENTER || k == KeyEvent.KEYCODE_ENTER || k == KeyEvent.KEYCODE_BACK) {
+                if (up) finishMove(k != KeyEvent.KEYCODE_BACK);
+                return true;
+            }
         }
         if (idle && down) {
             idle = false;
@@ -1092,6 +1257,17 @@ public class KidoActivity extends Activity {
         return out;
     }
 
+    private List<String> savedOrder() {
+        String saved = prefs.getString("order", "");
+        return saved.isEmpty() ? new ArrayList<>() : new ArrayList<>(Arrays.asList(saved.split(",")));
+    }
+
+    private void saveOrder() {
+        List<String> out = new ArrayList<>();
+        for (HexView h : hexViews) out.add(((Item) h.getTag()).app.pkg);
+        prefs.edit().putString("order", TextUtils.join(",", out)).apply();
+    }
+
     private void savePins(List<String> pins) {
         prefs.edit().putString("pins", TextUtils.join(",", pins)).apply();
     }
@@ -1102,8 +1278,11 @@ public class KidoActivity extends Activity {
         return out;
     }
 
+    private final List<TextView> hints = new ArrayList<>();
+
     private TextView hint() {
-        TextView t = text("HOLD OK // OPTIONS", Kido.mono, 20, Kido.DIM, 0.08f);
+        TextView t = text("MANTÉN OK // OPCIONES", Kido.mono, 20, Kido.DIM, 0.08f);
+        hints.add(t);
         t.setGravity(Gravity.CENTER_HORIZONTAL);
         return t;
     }
@@ -1113,28 +1292,28 @@ public class KidoActivity extends Activity {
         List<String> pins = shownPins();
         int at = pins.indexOf(app.pkg);
         List<String[]> rows = new ArrayList<>();
+        if (pinned ? pins.size() > 1 : hexViews.size() > 1) rows.add(new String[]{"移動", "MOVER", "move"});
         if (pinned) {
-            if (at > 0) rows.add(new String[]{"移動", "◀ MOVE LEFT", "left"});
-            if (at < pins.size() - 1) rows.add(new String[]{"移動", "MOVE RIGHT ▶", "right"});
-            rows.add(new String[]{"解除", "UNPIN FROM MAIN", "unpin"});
+            rows.add(new String[]{"解除", "QUITAR DE INICIO", "unpin"});
         } else if (pins.size() < 5) {
-            rows.add(new String[]{"固定", "PIN TO MAIN", "pin"});
+            rows.add(new String[]{"固定", "FIJAR EN INICIO", "pin"});
         } else {
             App last = ((Item) favViews.get(favViews.size() - 1).getTag()).app;
-            rows.add(new String[]{"固定", "PIN // REPLACES " + last.look.name.toUpperCase(Locale.ROOT), "pin"});
+            rows.add(new String[]{"固定", "FIJAR // REEMPLAZA A " + last.look.name.toUpperCase(Locale.ROOT), "pin"});
         }
-        rows.add(new String[]{"情報", "APP INFO", "info"});
+        rows.add(new String[]{"情報", "INFORMACIÓN DE LA APP", "info"});
         showMenu(origin, "CH." + app.ch + " // " + app.look.name.toUpperCase(Locale.ROOT), rows,
                 action -> menuAction(action, app, at));
-        log("OPTIONS CH." + app.ch + " " + app.look.name.toUpperCase(Locale.ROOT));
+        log("OPCIONES CH." + app.ch + " " + app.look.name.toUpperCase(Locale.ROOT));
     }
 
     /** Hold OK on Settings: sound on or off, and the color theme. */
     private void settingsMenu(View origin) {
         List<String[]> rows = new ArrayList<>();
-        rows.add(new String[]{"音響", beeps.isOn() ? "SOUND ON // TURN OFF" : "SOUND OFF // TURN ON", "sound"});
+        rows.add(new String[]{"音響", beeps.isOn() ? "SONIDO ACTIVADO // DESACTIVAR" : "SONIDO DESACTIVADO // ACTIVAR", "sound"});
+        rows.add(new String[]{"入力", inputKeyOn() ? "BOTÓN INPUT: SÍ // APAGAR" : "BOTÓN INPUT: NO // ENCENDER", "inputkey"});
         for (int i = 0; i < Kido.THEMES.length; i++) {
-            rows.add(new String[]{Kido.THEMES[i][0], "THEME // " + Kido.THEMES[i][1] + (i == Kido.theme ? "  ◀" : ""), "theme" + i});
+            rows.add(new String[]{Kido.THEMES[i][0], "TEMA // " + Kido.THEMES[i][1] + (i == Kido.theme ? "  ◀" : ""), "theme" + i});
         }
         showMenu(origin, "KIDŌ v" + versionName() + " // GLIDIAN.DEV", rows, action -> {
             if (action.equals("sound")) {
@@ -1142,10 +1321,15 @@ public class KidoActivity extends Activity {
                 toggleSound();
                 return;
             }
+            if (action.equals("inputkey")) {
+                closeMenu();
+                toggleInputKey();
+                return;
+            }
             int t = Integer.parseInt(action.substring(5));
             prefs.edit().putInt("theme", t).apply();
             Kido.applyTheme(t);
-            log("THEME " + Kido.THEMES[t][1]);
+            log("TEMA " + Kido.THEMES[t][1]);
             build();
             if (!sysViews.isEmpty()) sysViews.get(sysViews.size() - 1).requestFocus();
         });
@@ -1164,7 +1348,7 @@ public class KidoActivity extends Activity {
         head.setGravity(Gravity.BOTTOM);
         head.addView(text("操作", Kido.mincho, 58, Kido.AMBER, 0));
         head.addView(gap(16));
-        head.addView(text("OPTIONS", Kido.condBold, 34, Kido.INK, 0.16f));
+        head.addView(text("OPCIONES", Kido.condBold, 34, Kido.INK, 0.16f));
         panel.addView(head);
         TextView sub = text(subtitle, Kido.mono, 24, Kido.DIM, 0.06f);
         sub.setPadding(0, Kido.px(6), 0, Kido.px(18));
@@ -1222,6 +1406,10 @@ public class KidoActivity extends Activity {
     private void menuAction(String action, App app, int at) {
         List<String> pins = shownPins();
         switch (action) {
+            case "move":
+                closeMenu();
+                startMove(app);
+                return;
             case "left":
                 Collections.swap(pins, at, at - 1);
                 break;
@@ -1241,7 +1429,7 @@ public class KidoActivity extends Activity {
                 return;
         }
         savePins(pins);
-        log((action.equals("unpin") ? "UNPINNED " : action.equals("pin") ? "PINNED " : "MOVED ")
+        log((action.equals("unpin") ? "QUITADO " : action.equals("pin") ? "FIJADO " : "MOVIDO ")
                 + app.look.name.toUpperCase(Locale.ROOT));
         rebuild(app.pkg);
     }
@@ -1250,9 +1438,225 @@ public class KidoActivity extends Activity {
     private void rebuild(String focusPkg) {
         build();
         if (focusPkg == null) return;
-        for (View v : favViews) if (((Item) v.getTag()).app.pkg.equals(focusPkg)) { v.requestFocus(); return; }
-        for (HexView h : hexViews) if (((Item) h.getTag()).app.pkg.equals(focusPkg)) { h.requestFocus(); return; }
+        View target = null;
+        for (View v : favViews) if (((Item) v.getTag()).app.pkg.equals(focusPkg)) target = v;
+        for (HexView h : hexViews) if (((Item) h.getTag()).app.pkg.equals(focusPkg)) target = h;
+        if (target == null) return;
+        Item it = (Item) target.getTag();
+        if (it.zone != zone) {
+            // Stay on the section the app is in, without panning over from the main panels.
+            zone = it.zone;
+            board.animate().cancel();
+            board.setTranslationX(-Kido.px(ZONES[zone][0]));
+            board.setTranslationY(-Kido.px(ZONES[zone][1]));
+            showTabs(zone);
+            footerZone.setText("SEC-0" + (zone + 1) + " // " + ZONE_NAMES[zone][2]);
+        }
+        if (it.zone == 1) scrollHive(it.row, false);
+        target.requestFocus();
     }
+
+    // ---------------------------------------------------------------- moving an app
+
+    private View moving;            // the tile being moved with the arrows, or null
+    private ValueAnimator movePulse;
+
+    /** MOVER: the tile lights up red and the arrows carry it to a new place; OK drops it, Back cancels. */
+    private void startMove(App app) {
+        View v = null;
+        for (View f : favViews) if (((Item) f.getTag()).app == app) v = f;
+        for (HexView h : hexViews) if (((Item) h.getTag()).app == app) v = h;
+        if (v == null) return;
+        moving = v;
+        v.requestFocus();
+        swapAt = -1;
+        glowBehind(v);
+        pulse(zoneGlow[((Item) v.getTag()).zone]);
+        for (TextView h : hints) h.setText("◀▶▲▼ UBICAR // OK SOLTAR // ATRÁS CANCELAR");
+        setStatus("移動", "MOVIENDO", app.look.name.toUpperCase(Locale.ROOT) + " // ELIGE EL LUGAR", "OK SOLTAR", Kido.WARN);
+        beeps.section();
+        log("MOVER " + app.look.name.toUpperCase(Locale.ROOT));
+    }
+
+    /** One step of a move: the tile takes the next place and the others slide over to make room. */
+    private void moveStep(int key) {
+        Item it = (Item) moving.getTag();
+        boolean hive = it.zone == 1;
+        List<View> seq = new ArrayList<>(hive ? hexViews : favViews);
+        int i = seq.indexOf(moving), n = seq.size(), j = i;
+        if (hive && key == KeyEvent.KEYCODE_DPAD_UP && it.row == 0 && !favViews.isEmpty()) {
+            startSwap();
+            return;
+        }
+        if (key == KeyEvent.KEYCODE_DPAD_LEFT) j = i - 1;
+        else if (key == KeyEvent.KEYCODE_DPAD_RIGHT) j = i + 1;
+        else if (hive) {
+            float[] here = hexSlot(i);
+            int row = (int) here[2] + (key == KeyEvent.KEYCODE_DPAD_DOWN ? 1 : -1);
+            float best = Float.MAX_VALUE;
+            for (int k = 0; k < n; k++) {
+                float[] s = hexSlot(k);
+                if ((int) s[2] != row) continue;
+                float d = Math.abs(s[0] - here[0]);
+                if (d < best) {
+                    best = d;
+                    j = k;
+                }
+            }
+        }
+        if (j < 0 || j >= n || j == i) return;
+        seq.remove(i);
+        seq.add(j, moving);
+        int movedRow = 0;
+        for (int k = 0; k < n; k++) {
+            View v = seq.get(k);
+            float x = hive ? hexSlot(k)[0] : 122 + k * 340, y = hive ? hexSlot(k)[1] : 452;
+            FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) v.getLayoutParams();
+            int nx = Kido.px(x), ny = Kido.px(y);
+            if (lp.leftMargin != nx || lp.topMargin != ny) {
+                // Jump to the new place in the layout, then slide there from where it was on screen.
+                float ox = v.getX(), oy = v.getY();
+                lp.leftMargin = nx;
+                lp.topMargin = ny;
+                v.setLayoutParams(lp);
+                v.setTranslationX(ox - nx);
+                v.setTranslationY(oy - ny);
+            }
+            if (hive) {
+                int row = (int) hexSlot(k)[2];
+                v.setTag(new Item(1, ((Item) v.getTag()).app, row));
+                if (v == moving) movedRow = row;
+            }
+        }
+        if (hive) {
+            hexViews.clear();
+            for (View v : seq) hexViews.add((HexView) v);
+            scrollHive(movedRow, true);
+            hiveMoved = true;
+        } else {
+            favViews.clear();
+            favViews.addAll(seq);
+            for (View v : favViews) {
+                v.animate().translationX(0).translationY(v == moving ? -Kido.px(12) : 0)
+                        .setDuration(240).setInterpolator(fluid).start();
+            }
+        }
+        glowBehind(moving);
+        beeps.tick();
+    }
+
+    private int swapAt = -1;        // while moving an app up into the main panels: the panel it would replace
+
+    /** Up from the first row while moving: KIDŌ shows the main panels and lets you pick which one to swap. */
+    private void startSwap() {
+        App app = ((Item) moving.getTag()).app;
+        int x = Math.round(moving.getX() / Math.max(1f, Kido.scale));
+        swapAt = Math.max(0, Math.min(favViews.size() - 1, Math.round((x - 122) / 340f)));
+        moveTo(0);
+        showSwap(app);
+    }
+
+    private void showSwap(App app) {
+        View target = favViews.get(swapAt);
+        App out = ((Item) target.getTag()).app;
+        for (View f : favViews) {
+            f.animate().translationY(f == target ? -Kido.px(12) : 0).setDuration(200).setInterpolator(fluid).start();
+        }
+        GlowView g = zoneGlow[0];
+        hiveMoved = false;
+        glowBehind(target);
+        pulse(g);
+        setStatus("移動", "CAMBIAR", app.look.name.toUpperCase(Locale.ROOT) + " // POR " + out.look.name.toUpperCase(Locale.ROOT),
+                "OK CAMBIAR", Kido.WARN);
+        beeps.tick();
+    }
+
+    private void swapStep(int key) {
+        App app = ((Item) moving.getTag()).app;
+        if (key == KeyEvent.KEYCODE_DPAD_DOWN) {
+            // Back down into the honeycomb, still moving.
+            for (View f : favViews) f.animate().translationY(0).setDuration(200).start();
+            swapAt = -1;
+            moveTo(1);
+            glowBehind(moving);
+            pulse(zoneGlow[1]);
+            setStatus("移動", "MOVIENDO", app.look.name.toUpperCase(Locale.ROOT) + " // ELIGE EL LUGAR", "OK SOLTAR", Kido.WARN);
+            return;
+        }
+        int next = swapAt + (key == KeyEvent.KEYCODE_DPAD_LEFT ? -1 : key == KeyEvent.KEYCODE_DPAD_RIGHT ? 1 : 0);
+        if (next < 0 || next >= favViews.size() || next == swapAt) return;
+        swapAt = next;
+        showSwap(app);
+    }
+
+    /** The moved app takes the chosen main panel; the app that was there goes to the moved app's place. */
+    private void commitSwap() {
+        App in = ((Item) moving.getTag()).app;
+        App out = ((Item) favViews.get(swapAt).getTag()).app;
+        List<String> pins = shownPins();
+        pins.set(swapAt, in.pkg);
+        savePins(pins);
+        List<String> order = new ArrayList<>();
+        for (HexView h : hexViews) {
+            String pkg = ((Item) h.getTag()).app.pkg;
+            order.add(pkg.equals(in.pkg) ? out.pkg : pkg);
+        }
+        prefs.edit().putString("order", TextUtils.join(",", order)).apply();
+        if (movePulse != null) movePulse.cancel();
+        movePulse = null;
+        moving = null;
+        swapAt = -1;
+        log("CAMBIO " + in.look.name.toUpperCase(Locale.ROOT) + " // " + out.look.name.toUpperCase(Locale.ROOT));
+        rebuild(in.pkg);
+    }
+
+    private void pulse(GlowView g) {
+        if (movePulse != null) movePulse.cancel();
+        for (GlowView other : zoneGlow) if (other != null && other != g) other.setAlpha(0f);
+        movePulse = ValueAnimator.ofFloat(1f, 0.35f);
+        movePulse.setDuration(650);
+        movePulse.setRepeatMode(ValueAnimator.REVERSE);
+        movePulse.setRepeatCount(ValueAnimator.INFINITE);
+        movePulse.addUpdateListener(a -> g.setAlpha((float) a.getAnimatedValue()));
+        movePulse.start();
+    }
+
+    /** OK keeps the new order (and renumbers the channels); Back puts everything back as it was. */
+    private void finishMove(boolean keep) {
+        if (moving == null) return;
+        if (swapAt >= 0) {
+            if (keep) {
+                commitSwap();
+                return;
+            }
+            swapAt = -1;
+        }
+        Item it = (Item) moving.getTag();
+        if (keep) {
+            if (it.zone == 0) savePins(shownPins());
+            else saveOrder();
+        }
+        if (movePulse != null) movePulse.cancel();
+        movePulse = null;
+        moving = null;
+        log((keep ? "MOVIDO " : "SIN CAMBIOS ") + it.app.look.name.toUpperCase(Locale.ROOT));
+        rebuild(it.app.pkg);
+    }
+
+    /** The place of the k-th hex in reading order: x, y and row, in alternating rows of five and four. */
+    private static float[] hexSlot(int k) {
+        int row = 0, start = 0;
+        while (true) {
+            int per = row % 2 == 0 ? 5 : 4;
+            if (k < start + per) {
+                int c = k - start;
+                return new float[]{150 + c * 246 + (row % 2 == 1 ? 123 : 0), 452 + row * 214, row};
+            }
+            start += per;
+            row++;
+        }
+    }
+
 
     /** Apps installed, removed or updated: rebuild now if KIDŌ is on screen, otherwise when it comes back. */
     private final BroadcastReceiver packageWatch = new BroadcastReceiver() {
@@ -1270,15 +1674,16 @@ public class KidoActivity extends Activity {
         @Override
         public void run() {
             int linked = 0;
-            for (TextView t : inputMeta.values()) if ("LINKED".contentEquals(t.getText())) linked++;
+            for (TextView t : inputMeta.values()) if ("CONECTADO".contentEquals(t.getText())) linked++;
             long up = SystemClock.elapsedRealtime() / 1000;
             updateWifi();
             String date = dateLine();
             if (!date.contentEquals(dateText.getText())) dateText.setText(date);
-            dataValues.setText(String.format(Locale.ROOT, "%04d  OK\n%d MB\n%02d:%02d:%02d\n%d // %d LINKED",
+            dataValues.setText(String.format(Locale.ROOT, "%04d  OK\n%d MB\n%02d:%02d:%02d\n%d // %d CONECT.",
                     sysCheck, freeMb(), up / 3600, up / 60 % 60, up % 60, inputCount, linked));
+            renderTicker();
             if (SystemClock.uptimeMillis() - lastLogAt > 6000) {
-                log(String.format(Locale.ROOT, "SYS-CHK %04d // PARITY %04X // OK", ++sysCheck, new Random().nextInt(0x10000)));
+                log(String.format(Locale.ROOT, "VERIF. %04d // PARIDAD %04X // OK", ++sysCheck, new Random().nextInt(0x10000)));
             }
             handler.postDelayed(this, 1000);
         }
@@ -1287,11 +1692,20 @@ public class KidoActivity extends Activity {
     /** Adds a line to the footer log. The newest entry is bright; the two before it trail off to the right. */
     private void log(String line) {
         lastLogAt = SystemClock.uptimeMillis();
-        logLines.add(0, new SimpleDateFormat("HH:mm:ss", Locale.US).format(new Date()) + "  " + line);
+        logLines.add(0, line);
         while (logLines.size() > 3) logLines.remove(3);
+        renderTicker();
+    }
+
+    /** The footer: a live clock (it ticks every second, like the big one) and the latest log lines after it. */
+    private void renderTicker() {
+        if (ticker == null) return;
         SpannableStringBuilder sb = new SpannableStringBuilder();
+        String now = new SimpleDateFormat("HH:mm:ss", Locale.US).format(new Date());
+        sb.append(now);
+        sb.setSpan(new ForegroundColorSpan(Kido.AMBER), 0, sb.length(), 0);
         for (int i = 0; i < logLines.size(); i++) {
-            if (i > 0) sb.append("   //   ");
+            sb.append(i == 0 ? "  " : "   //   ");
             int start = sb.length();
             sb.append(logLines.get(i));
             if (i == 0) sb.setSpan(new ForegroundColorSpan(Kido.INK), start, sb.length(), 0);
@@ -1311,15 +1725,15 @@ public class KidoActivity extends Activity {
         if (info != null && info.getRssi() > -127) {
             wifiLevel = WifiManager.calculateSignalLevel(info.getRssi(), 21) / 20f;
             wifiRate = info.getLinkSpeed() + " MBPS // " + info.getRssi() + " DBM";
-            quality = wifiLevel > 0.7f ? "STRONG" : wifiLevel > 0.45f ? "GOOD" : wifiLevel > 0.25f ? "FAIR" : "WEAK";
+            quality = wifiLevel > 0.7f ? "FUERTE" : wifiLevel > 0.45f ? "BUENA" : wifiLevel > 0.25f ? "REGULAR" : "DÉBIL";
         } else if (caps != null) {
             wifiLevel = 1f;
-            wifiRate = "WIRED // OK";
-            quality = "WIRED";
+            wifiRate = "CABLE // OK";
+            quality = "CABLE";
         } else {
             wifiLevel = 0f;
-            wifiRate = "NO LINK";
-            quality = "OFFLINE";
+            wifiRate = "SIN ENLACE";
+            quality = "SIN RED";
         }
         readLink.setText(quality);
         readLink.setTextColor(wifiLevel > 0.45f ? Kido.GREEN : wifiLevel > 0.25f ? Kido.AMBER : Kido.WARN);
@@ -1334,7 +1748,7 @@ public class KidoActivity extends Activity {
             long t = getPackageManager().getPackageInfo(pkg, 0).lastUpdateTime;
             boolean thisYear = new SimpleDateFormat("yyyy", Locale.US).format(new Date(t))
                     .equals(new SimpleDateFormat("yyyy", Locale.US).format(new Date()));
-            return new SimpleDateFormat(thisYear ? "dd MMM" : "dd MMM yy", Locale.US).format(new Date(t)).toUpperCase(Locale.ROOT);
+            return new SimpleDateFormat(thisYear ? "dd MMM" : "dd MMM yy", new Locale("es")).format(new Date(t)).replace(".", "").toUpperCase(Locale.ROOT);
         } catch (PackageManager.NameNotFoundException e) {
             return "--";
         }
@@ -1346,13 +1760,45 @@ public class KidoActivity extends Activity {
         return info.availMem / (1024 * 1024);
     }
 
+    // ---------------------------------------------------------------- the Input button helper
+
+    private static final String INPUT_SERVICE = "dev.glidian.kido/dev.glidian.kido.InputKeyService";
+
+    private boolean inputKeyOn() {
+        String list = Settings.Secure.getString(getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+        return list != null && list.contains(INPUT_SERVICE);
+    }
+
+    /**
+     * Switches the Input button helper on or off. With it on, Input opens the inputs panel from any app, but
+     * Android stops repeating a held volume key (it steps once per press); with it off, volume is continuous.
+     * Needs WRITE_SECURE_SETTINGS, granted once over ADB.
+     */
+    private void toggleInputKey() {
+        boolean on = !inputKeyOn();
+        try {
+            android.content.ContentResolver cr = getContentResolver();
+            String list = Settings.Secure.getString(cr, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+            List<String> items = new ArrayList<>();
+            if (list != null) for (String s : list.split(":")) if (!s.isEmpty() && !s.equals(INPUT_SERVICE)) items.add(s);
+            if (on) items.add(INPUT_SERVICE);
+            Settings.Secure.putString(cr, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, TextUtils.join(":", items));
+            Settings.Secure.putInt(cr, Settings.Secure.ACCESSIBILITY_ENABLED, items.isEmpty() ? 0 : 1);
+            flashToast("入力", on ? "BOTÓN INPUT ENCENDIDO. EL VOLUMEN SUBE UN PASO POR PULSACIÓN."
+                    : "BOTÓN INPUT APAGADO. EL VOLUMEN VUELVE A SUBIR SEGUIDO.");
+            log("BOTÓN INPUT " + (on ? "SÍ" : "NO"));
+        } catch (SecurityException e) {
+            flashToast("入力", "FALTA EL PERMISO: pm grant dev.glidian.kido android.permission.WRITE_SECURE_SETTINGS");
+        }
+    }
+
     private void toggleSound() {
         boolean on = !beeps.isOn();
         beeps.setOn(on);
         prefs.edit().putBoolean("sound", on).apply();
         beeps.tick();
-        flashToast("音響", on ? "SOUND ON. HOLD OK ON SETTINGS TO MUTE." : "SOUND OFF. HOLD OK ON SETTINGS TO TURN IT BACK ON.");
-        log("SOUND " + (on ? "ON" : "OFF"));
+        flashToast("音響", on ? "SONIDO ACTIVADO. MANTÉN OK EN AJUSTES PARA SILENCIAR." : "SONIDO DESACTIVADO. MANTÉN OK EN AJUSTES PARA VOLVER A ACTIVARLO.");
+        log("SONIDO " + (on ? "ACTIVADO" : "DESACTIVADO"));
     }
 
     // ---------------------------------------------------------------- input alert
@@ -1361,12 +1807,116 @@ public class KidoActivity extends Activity {
         @Override
         public void onInputStateChanged(String inputId, int state) {
             TextView meta = inputMeta.get(inputId);
-            if (meta == null) return;
+            if (meta == null) {
+                refreshSoon();      // a CEC device on a port changed: its name may have changed too
+                return;
+            }
             boolean linked = state == TvInputManager.INPUT_STATE_CONNECTED;
-            meta.setText(linked ? "LINKED" : "EMPTY");
+            refreshDevices();
             if (linked && resumed) showAlert(inputId);
         }
+
+        @Override
+        public void onInputAdded(String inputId) {
+            // A console that turns on announces itself over HDMI-CEC as a new input under its port.
+            TvInputManager tim = (TvInputManager) getSystemService(TV_INPUT_SERVICE);
+            TvInputInfo info = tim != null ? tim.getTvInputInfo(inputId) : null;
+            String port = info != null ? info.getParentId() : null;
+            boolean isNew = port != null && inputMeta.containsKey(port) && cecSeen.get(port) == null;
+            refreshDevices();
+            if (isNew && cecSeen.get(port) != null && resumed) showAlert(port);
+        }
+
+        @Override
+        public void onInputRemoved(String inputId) {
+            refreshSoon();
+        }
+
+        @Override
+        public void onInputUpdated(String inputId) {
+            refreshSoon();
+        }
+
+        @Override
+        public void onTvInputInfoUpdated(TvInputInfo info) {
+            refreshSoon();
+        }
     };
+
+    private final Runnable refreshDevicesRun = this::refreshDevices;
+
+    /** CEC devices often announce themselves in a burst; wait for it to settle before relabelling. */
+    private void refreshSoon() {
+        handler.removeCallbacks(refreshDevicesRun);
+        handler.postDelayed(refreshDevicesRun, 400);
+    }
+
+    /** Relabels every HDMI box with the device now on that port, or the port's own name when there is none. */
+    private void refreshDevices() {
+        TvInputManager tim = (TvInputManager) getSystemService(TV_INPUT_SERVICE);
+        if (tim == null) return;
+        for (Map.Entry<String, TextView> e : inputNameViews.entrySet()) {
+            String id = e.getKey();
+            String port = inputPortLabel.get(id);
+            String dev = deviceOn(tim, id);
+            String shown = dev != null ? dev : port;
+            if (!shown.contentEquals(e.getValue().getText())) {
+                e.getValue().setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, Kido.px(30));
+                e.getValue().setText(shown);
+                fitLine(e.getValue(), inputNameWidth > 0 ? inputNameWidth : Kido.px(146));
+            }
+            String left = dev != null ? port : "PUERTO " + inputPortNo.get(id);
+            TextView ml = inputPortViews.get(id);
+            if (ml != null) ml.setText(left);
+            String cec = cecDeviceOn(tim, id);
+            cecSeen.put(id, cec);
+            boolean linked = tim.getInputState(id) == TvInputManager.INPUT_STATE_CONNECTED || cec != null;
+            String state = linked ? "CONECTADO" : "LIBRE";
+            TextView meta = inputMeta.get(id);
+            if (meta != null && !state.contentEquals(meta.getText())) meta.setText(state);
+            String[] st = inputStatus.get(id);
+            if (st != null) {
+                st[2] = shown + " // " + left;
+                st[3] = state;
+            }
+            inputLabels.put(id, shown);
+        }
+        if (alertInput != null && alert != null && alert.getVisibility() == View.VISIBLE) {
+            alertDetail.setText(inputLabels.get(alertInput) + " // SEÑAL DETECTADA");
+        }
+    }
+
+    /**
+     * The name of what is plugged into an HDMI port: the name an HDMI-CEC device announces (for example
+     * "PlayStation 5"), or failing that the name given to the port in the TV's input settings. Null when
+     * neither is known, so the box keeps showing the port.
+     */
+    private String deviceOn(TvInputManager tim, String portId) {
+        if (tim == null || portId == null) return null;
+        String cec = cecDeviceOn(tim, portId);
+        if (cec != null) return cec;
+        TvInputInfo self = tim.getTvInputInfo(portId);
+        return self != null ? nameOf(self, false) : null;
+    }
+
+    /** The name an HDMI-CEC device on this port announces, or null when the TV lists none under it. */
+    private String cecDeviceOn(TvInputManager tim, String portId) {
+        if (tim == null || portId == null) return null;
+        for (TvInputInfo info : tim.getTvInputList()) {
+            if (!portId.equals(info.getParentId())) continue;
+            String name = nameOf(info, true);
+            if (name != null) return name;
+        }
+        return null;
+    }
+
+    private String nameOf(TvInputInfo info, boolean orLabel) {
+        CharSequence custom = info.loadCustomLabel(this);
+        if (custom != null && custom.toString().trim().length() > 0) return custom.toString().trim().toUpperCase(Locale.ROOT);
+        if (!orLabel) return null;
+        CharSequence label = info.loadLabel(this);
+        return label != null && label.toString().trim().length() > 0 ? label.toString().trim().toUpperCase(Locale.ROOT) : null;
+    }
 
     /** The panel that drops in when something is plugged into an HDMI port. OK switches to it. */
     private void buildAlert() {
@@ -1380,11 +1930,11 @@ public class KidoActivity extends Activity {
         k.setTextScaleX(0.8f);
         k.setShadowLayer(Kido.px(24), 0, 0, Kido.withAlpha(Kido.WARN, 0.8f));
         place(pulse, k, 40, 74, -1, -1);
-        place(pulse, text("INPUT DETECTED", Kido.condBold, 52, Kido.WARN, 0.14f), 470, 62, -1, -1);
+        place(pulse, text("ENTRADA DETECTADA", Kido.condBold, 52, Kido.WARN, 0.14f), 470, 62, -1, -1);
         alert.addView(pulse, match());
         alertDetail = text("", Kido.mono, 28, Kido.CREAM, 0.04f);
         place(alert, alertDetail, 474, 134, 740, -1);
-        place(alert, text("OK  SWITCH NOW      BACK  DISMISS", Kido.mono, 22, Kido.DIM, 0.06f), 474, 192, -1, -1);
+        place(alert, text("OK  CAMBIAR AHORA      ATRÁS  DESCARTAR", Kido.mono, 22, Kido.DIM, 0.06f), 474, 192, -1, -1);
         place(root, alert, 340, 400, 1240, 280);
         unclip(k);
         // A slow pulse, well under three flashes a second.
@@ -1398,7 +1948,7 @@ public class KidoActivity extends Activity {
     private void showAlert(String inputId) {
         alertInput = inputId;
         String label = inputLabels.get(inputId);
-        alertDetail.setText(label + " // SIGNAL LOCKED");
+        alertDetail.setText(label + " // SEÑAL DETECTADA");
         alert.animate().cancel();
         alert.setVisibility(View.VISIBLE);
         alert.setAlpha(0f);
@@ -1406,7 +1956,7 @@ public class KidoActivity extends Activity {
         alert.animate().alpha(1f).translationY(0).setDuration(300).setInterpolator(new DecelerateInterpolator(2f)).start();
         alertPulse.start();
         beeps.alert();
-        log("ALERT // INPUT DETECTED " + label);
+        log("ALERTA // ENTRADA DETECTADA " + label);
         handler.removeCallbacks(hideAlert);
         handler.postDelayed(hideAlert, 8000);
     }
@@ -1447,7 +1997,7 @@ public class KidoActivity extends Activity {
         LinearLayout hs = new LinearLayout(this);
         hs.setOrientation(LinearLayout.VERTICAL);
         hs.setPadding(0, 0, 0, Kido.px(18));
-        hs.addView(text("SYSTEM CHECK", Kido.condBold, 44, Kido.AMBER, 0.16f));
+        hs.addView(text("VERIFICACIÓN DEL SISTEMA", Kido.condBold, 44, Kido.AMBER, 0.16f));
         hs.addView(text("KIDŌ v" + versionName(), Kido.mono, 24, Kido.DIM, 0.06f));
         head.addView(hs);
         col.addView(head);
@@ -1455,13 +2005,13 @@ public class KidoActivity extends Activity {
 
         android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
         String[][] checks = {
-                {"SUBSYSTEM 01", "承認 APPROVED"},
-                {"SUBSYSTEM 02", "承認 APPROVED"},
-                {"SUBSYSTEM 03", "承認 APPROVED"},
-                {"DISPLAY // " + dm.widthPixels + "x" + dm.heightPixels, "OK"},
-                {"INPUT BUS // " + inputCount + " PORTS", "OK"},
-                {"CHANNELS // " + channelCount + " LOADED", "OK"},
-                {"FREE MEMORY // " + freeMb() + " MB", "OK"}};
+                {"SUBSISTEMA 01", "承認 APROBADO"},
+                {"SUBSISTEMA 02", "承認 APROBADO"},
+                {"SUBSISTEMA 03", "承認 APROBADO"},
+                {"PANTALLA // " + dm.widthPixels + "x" + dm.heightPixels, "OK"},
+                {"BUS DE ENTRADA // " + inputCount + " PUERTOS", "OK"},
+                {"CANALES // " + channelCount + " CARGADOS", "OK"},
+                {"MEMORIA LIBRE // " + freeMb() + " MB", "OK"}};
         List<View> steps = new ArrayList<>();
         for (String[] c : checks) {
             LinearLayout r = row();
@@ -1473,7 +2023,7 @@ public class KidoActivity extends Activity {
             col.addView(r, lp);
             steps.add(r);
         }
-        TextView done = text("全系統 正常   ALL SYSTEMS NOMINAL", Kido.condBold, 44, Kido.GREEN, 0.12f);
+        TextView done = text("全系統 正常   TODOS LOS SISTEMAS NORMALES", Kido.condBold, 44, Kido.GREEN, 0.12f);
         done.setShadowLayer(Kido.px(18), 0, 0, Kido.withAlpha(Kido.GREEN, 0.55f));
         done.setAlpha(0f);
         LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(-2, -2);
@@ -1492,7 +2042,7 @@ public class KidoActivity extends Activity {
         LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(-1, Kido.px(28));
         tlp.topMargin = Kido.px(24);
         col.addView(track, tlp);
-        TextView build = text("BUILD // GLIDIAN.DEV", Kido.mono, 20, Kido.DIM, 0.12f);
+        TextView build = text("VERSIÓN // GLIDIAN.DEV", Kido.mono, 20, Kido.DIM, 0.12f);
         LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(-2, -2);
         blp.topMargin = Kido.px(22);
         col.addView(build, blp);
@@ -1519,7 +2069,7 @@ public class KidoActivity extends Activity {
         boot = null;
         b.animate().alpha(0f).setDuration(400).withEndAction(() -> root.removeView(b)).start();
         intro(zone);
-        log("BOOT CHECK COMPLETE // ALL SYSTEMS NOMINAL");
+        log("ARRANQUE COMPLETO // TODOS LOS SISTEMAS NORMALES");
     }
 
     // ---------------------------------------------------------------- small helpers
@@ -1536,6 +2086,16 @@ public class KidoActivity extends Activity {
     }
 
     /** Shrinks the text until its longest word fits on one line, so names never break mid-word. */
+    /** Shrinks a single-line label until it fits the width, for long device names on narrow input boxes. */
+    private static void fitLine(TextView t, int width) {
+        if (width <= 0) return;
+        float size = t.getTextSize();
+        Paint p = new Paint(t.getPaint());
+        p.setTextSize(size);
+        float w = p.measureText(t.getText().toString());
+        if (w > width) t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, size * width / w * 0.98f);
+    }
+
     private static void fitWords(TextView t, int width) {
         Paint p = new Paint(t.getPaint());
         float size = t.getTextSize();
@@ -1555,7 +2115,7 @@ public class KidoActivity extends Activity {
     }
 
     private static String dateLine() {
-        return new SimpleDateFormat("EEE dd MMM yyyy", Locale.US).format(new Date()).toUpperCase(Locale.ROOT) + "  //  SYSTEM NOMINAL";
+        return new SimpleDateFormat("EEE dd MMM yyyy", new Locale("es")).format(new Date()).replace(".", "").toUpperCase(Locale.ROOT) + "  //  SISTEMA NORMAL";
     }
 
     private String versionName() {
