@@ -6,6 +6,7 @@ import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -1791,11 +1792,15 @@ public class KidoActivity extends Activity {
 
     // ---------------------------------------------------------------- the Input button helper
 
-    private static final String INPUT_SERVICE = "dev.glidian.kido/dev.glidian.kido.InputKeyService";
+    /** True if an entry in the enabled accessibility services (full or short form) is KIDŌ's own helper. */
+    private boolean isInputService(String entry) {
+        return new ComponentName(this, InputKeyService.class).equals(ComponentName.unflattenFromString(entry));
+    }
 
     private boolean inputKeyOn() {
         String list = Settings.Secure.getString(getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
-        return list != null && list.contains(INPUT_SERVICE);
+        if (list != null) for (String s : list.split(":")) if (isInputService(s)) return true;
+        return false;
     }
 
     /**
@@ -1809,8 +1814,9 @@ public class KidoActivity extends Activity {
             android.content.ContentResolver cr = getContentResolver();
             String list = Settings.Secure.getString(cr, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
             List<String> items = new ArrayList<>();
-            if (list != null) for (String s : list.split(":")) if (!s.isEmpty() && !s.equals(INPUT_SERVICE)) items.add(s);
-            if (on) items.add(INPUT_SERVICE);
+            // Other services the user has on are kept exactly as they are.
+            if (list != null) for (String s : list.split(":")) if (!s.isEmpty() && !isInputService(s)) items.add(s);
+            if (on) items.add(new ComponentName(this, InputKeyService.class).flattenToString());
             Settings.Secure.putString(cr, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, TextUtils.join(":", items));
             Settings.Secure.putInt(cr, Settings.Secure.ACCESSIBILITY_ENABLED, items.isEmpty() ? 0 : 1);
             flashToast("入力", str(on ? R.string.input_on_toast : R.string.input_off_toast));
