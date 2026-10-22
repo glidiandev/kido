@@ -73,6 +73,10 @@ public class KidoActivity extends Activity {
     private static final String[] TAB_KANJI = {"主要", "アプリ", "制御"};
     private static final int[] ZONE_TITLES = {R.string.zone_main, R.string.zone_apps, R.string.zone_system};
     private static final int[] ZONE_TABS = {R.string.zone_main_tab, R.string.zone_apps_tab, R.string.zone_system_tab};
+    // The section tabs under the clock: left edge, step from one tab to the next, and tab width. The data block and
+    // the NOW PLAYING panel above them span exactly the same width.
+    private static final int TAB_X = 730, TAB_STEP = 146, TAB_W = 136;
+    private static final int NP_W = TAB_STEP * 2 + TAB_W;
     private static final long IDLE_MS = 45_000;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -132,7 +136,8 @@ public class KidoActivity extends Activity {
     private FrameLayout npPanel;
     private View npAccent;
     private GradientDrawable npBg, npTagBg;
-    private TextView npTag, npHead, npTitle, npArtist, npState, npHint;
+    private TextView npTag, npHead, npTitle, npArtist, npState;
+    private String npArtistLine = "";
     private int npColor;
     private View npReturn;      // where focus goes back to when it leaves the panel
     private SegClockView npTime;
@@ -731,12 +736,12 @@ public class KidoActivity extends Activity {
 
         dataLabels = text(str(R.string.data_labels), Kido.mono, 17, Kido.DIM, 0.06f);
         dataLabels.setLineSpacing(Kido.px(6), 1f);
-        // The data block and the NOW PLAYING panel share one spot: left-aligned with the section tabs below,
-        // which keeps clear of the clock even at 12:59 PM, its widest.
-        place(hud, dataLabels, 748, 76, -1, -1);
+        // The data block and the NOW PLAYING panel share one spot, as wide as the row of section tabs below it.
+        // Its left edge keeps clear of the clock even at 12:59 PM, the clock's widest.
+        place(hud, dataLabels, TAB_X + 18, 76, -1, -1);
         dataValues = text("", Kido.mono, 17, Kido.INK, 0.06f);
         dataValues.setLineSpacing(Kido.px(6), 1f);
-        place(hud, dataValues, 878, 76, 220, -1);
+        place(hud, dataValues, TAB_X + 148, 76, 220, -1);
         buildNowPlaying(hud);
 
         for (int i = 0; i < 3; i++) {
@@ -747,10 +752,10 @@ public class KidoActivity extends Activity {
             tabText[i * 2 + 1] = text(str(ZONE_TABS[i]), Kido.condBold, 22, Kido.withAlpha(Kido.LIME, 0.85f), 0.12f);
             place(tab, tabText[i * 2], 12, 6, -1, -1);
             place(tab, tabText[i * 2 + 1], 12, 38, -1, -1);
-            place(hud, tab, 730 + i * 146, 214, 136, 74);
+            place(hud, tab, TAB_X + i * TAB_STEP, 214, TAB_W, 74);
             tabBar[i] = new GlowView(this, Kido.px(12), false);
             tabBar[i].setColor(Kido.RED);
-            place(hud, tabBar[i], 724 + i * 146, 284, 148, 32);
+            place(hud, tabBar[i], TAB_X - 6 + i * TAB_STEP, 284, TAB_W + 12, 32);
         }
 
         plate = new FrameLayout(this);
@@ -821,28 +826,20 @@ public class KidoActivity extends Activity {
         place(npPanel, head, 18, 12, -1, -1);
         npState = text("", Kido.mincho, 18, Kido.DIM, 0);
         npState.setGravity(Gravity.END);
-        place(npPanel, npState, 300, 14, 84, -1);
+        place(npPanel, npState, NP_W - 100, 14, 84, -1);
         npTitle = text("", Kido.condBold, 30, Kido.CREAM, 0.04f);
-        npTitle.setSingleLine(true);
-        npTitle.setEllipsize(TextUtils.TruncateAt.END);
-        place(npPanel, npTitle, 18, 46, 366, -1);
+        marquee(npTitle);
+        place(npPanel, npTitle, 18, 46, NP_W - 34, -1);
         npArtist = text("", Kido.mono, 18, Kido.DIM, 0);
-        npArtist.setSingleLine(true);
-        npArtist.setEllipsize(TextUtils.TruncateAt.END);
-        place(npPanel, npArtist, 18, 84, 366, -1);
+        marquee(npArtist);
+        place(npPanel, npArtist, 18, 84, NP_W - 34, -1);
+        // Elapsed / total time, then the play or pause mark and the meter in what's left of the row.
         npTime = new SegClockView(this, true);
-        place(npPanel, npTime, 10, 106, 128, 40);
+        place(npPanel, npTime, 10, 106, 240, 40);
         npGlyph = new PlayGlyph(this);
-        place(npPanel, npGlyph, 146, 116, 20, 20);
-        npMeter = new PillsView(this, 12);
-        place(npPanel, npMeter, 178, 114, 206, 24);
-        // Shown in place of the mark and meter while the panel has focus.
-        npHint = text(str(R.string.np_hint), Kido.mono, 16, Kido.DARK_TEXT, 0.04f);
-        npHint.setSingleLine(true);
-        npHint.setGravity(Gravity.END);
-        fitLine(npHint, Kido.px(238));
-        npHint.setVisibility(View.GONE);
-        place(npPanel, npHint, 146, 118, 238, -1);
+        place(npPanel, npGlyph, 258, 116, 20, 20);
+        npMeter = new PillsView(this, 9);
+        place(npPanel, npMeter, 290, 114, NP_W - 306, 24);
         npPanel.setOnFocusChangeListener((v, has) -> {
             paintNowPlaying();
             // The tile glow comes back on its own when focus returns to a tile.
@@ -850,7 +847,27 @@ public class KidoActivity extends Activity {
             if (has && SystemClock.uptimeMillis() - lastKeyAt < 400) beeps.tick();
         });
         npPanel.setVisibility(View.GONE);
-        place(hud, npPanel, 730, 56, 400, 150);
+        place(hud, npPanel, TAB_X, 56, NP_W, 150);
+    }
+
+    /**
+     * A line that scrolls slowly, like a car stereo, when it's too long to fit: a pause at the start, a steady
+     * scroll, then round again. Lines that fit stay still. With animations turned off on the TV it's cut short.
+     */
+    private static void marquee(TextView t) {
+        t.setSingleLine(true);
+        if (ValueAnimator.areAnimatorsEnabled()) {
+            t.setEllipsize(TextUtils.TruncateAt.MARQUEE);
+            t.setMarqueeRepeatLimit(-1);
+            t.setSelected(true);
+        } else {
+            t.setEllipsize(TextUtils.TruncateAt.END);
+        }
+    }
+
+    /** Sets a line's text only when it changes, so a scrolling line isn't sent back to the start every second. */
+    private static void setLine(TextView t, String s) {
+        if (!s.contentEquals(t.getText())) t.setText(s);
     }
 
     /** Colors the panel: the app's color at rest, and KIDŌ's orange focus fill with dark text when focused. */
@@ -867,10 +884,9 @@ public class KidoActivity extends Activity {
         npTitle.setTextColor(f ? dark : Kido.CREAM);
         npArtist.setTextColor(f ? dark : Kido.DIM);
         npTime.setColor(f ? dark : npColor);
-        npGlyph.set(nowPlaying.playing(), npColor);
-        npGlyph.setVisibility(f ? View.INVISIBLE : View.VISIBLE);
-        npMeter.setVisibility(f ? View.INVISIBLE : View.VISIBLE);
-        npHint.setVisibility(f ? View.VISIBLE : View.GONE);
+        npGlyph.set(nowPlaying.playing(), f ? dark : npColor);
+        // While focused, the artist line says what the keys do.
+        setLine(npArtist, f ? str(R.string.np_hint) : npArtistLine);
     }
 
     /**
@@ -932,15 +948,15 @@ public class KidoActivity extends Activity {
         String appName = app != null ? app.look.name : appLabel(pkg);
         String title = nowPlaying.title().toUpperCase(Locale.ROOT);
         String artist = nowPlaying.artist();
-        npTitle.setText(title);
-        npArtist.setText((artist != null && !artist.isEmpty() ? artist + " // " : "") + appName.toUpperCase(Locale.ROOT));
+        setLine(npTitle, title);
+        npArtistLine = (artist != null && !artist.isEmpty() ? artist + " // " : "") + appName.toUpperCase(Locale.ROOT);
         npColor = color;
         boolean playing = nowPlaying.playing();
         npState.setText(playing ? "再生中" : "一時停止");
         paintNowPlaying();
         long t = nowPlaying.elapsedSeconds();
         npTime.setVisibility(t >= 0 ? View.VISIBLE : View.INVISIBLE);
-        if (t >= 0) npTime.showElapsed(t);
+        if (t >= 0) npTime.showElapsed(t, nowPlaying.totalSeconds());
         if (playing) handler.post(meterTick);
         else npMeter.setLevel(0f);
         if (!title.equals(npLast)) {
@@ -1932,7 +1948,7 @@ public class KidoActivity extends Activity {
                     sysCheck, freeMb(), up / 3600, up / 60 % 60, up % 60, inputCount, linked) + str(R.string.linked_short));
             if (npPanel.getVisibility() == View.VISIBLE) {
                 long t = nowPlaying.elapsedSeconds();
-                if (t >= 0) npTime.showElapsed(t);
+                if (t >= 0) npTime.showElapsed(t, nowPlaying.totalSeconds());
             }
             renderTicker();
             if (SystemClock.uptimeMillis() - lastLogAt > 6000) {

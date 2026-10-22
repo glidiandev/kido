@@ -12,7 +12,8 @@ import java.util.Locale;
 /**
  * Seven-segment clock: h:mm with small seconds, plus AM/PM unless the TV is set to 24-hour time.
  * Segments are hex-ended polygons; unlit segments stay faintly visible like a real display. Redraws
- * once a second. As a timer it shows a time it's given instead (m:ss, or h:mm:ss past an hour).
+ * once a second. As a timer it shows a time it's given instead (m:ss, or h:mm:ss past an hour), and the total
+ * after a slanted divider when it's known: 0:04 / 3:12.
  */
 final class SegClockView extends View {
     // Segments a..g on a 60x100 digit cell.
@@ -35,7 +36,7 @@ final class SegClockView extends View {
     private final Paint ampm = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path path = new Path();
     private final boolean timer;
-    private long elapsed;
+    private long elapsed, total = -1;
 
     private final Runnable tick = new Runnable() {
         @Override
@@ -66,10 +67,12 @@ final class SegClockView extends View {
         invalidate();
     }
 
-    /** Timer mode: the time to show, in seconds. */
-    void showElapsed(long seconds) {
-        if (seconds == elapsed) return;
+    /** Timer mode: the time to show and the total, in seconds (a total of -1 or less shows the time alone). */
+    void showElapsed(long seconds, long total) {
+        if (total > 0) seconds = Math.min(seconds, total);
+        if (seconds == elapsed && total == this.total) return;
         elapsed = seconds;
+        this.total = total;
         invalidate();
     }
 
@@ -120,19 +123,48 @@ final class SegClockView extends View {
     }
 
     private void drawTimer(Canvas canvas) {
-        float pad = getHeight() * 0.15f;
-        float big = getHeight() - pad * 2, bigW = big * 0.58f, gap = big * 0.06f;
-        long h = elapsed / 3600, m = elapsed / 60 % 60, s = elapsed % 60;
-        String[] groups = h > 0
-                ? new String[]{String.valueOf(h), String.format(Locale.ROOT, "%02d", m), String.format(Locale.ROOT, "%02d", s)}
-                : new String[]{String.valueOf(m), String.format(Locale.ROOT, "%02d", s)};
-        canvas.translate(pad + big * 0.12f, pad);
+        float pad = getHeight() * 0.15f, full = getHeight() - pad * 2;
+        String a = timeText(elapsed), b = total > 0 ? timeText(total) : null;
+        // Digits shrink to fit the view when the times run long (past an hour), staying on the bottom line.
+        float need = timeWidth(a, full) + (b != null ? full * 0.6f + timeWidth(b, full) : 0) + full * 0.12f;
+        float big = Math.min(full, full * (getWidth() - pad * 2) / need);
+        canvas.translate(pad + big * 0.12f, pad + full - big);
         canvas.skew(-0.12f, 0);
-        float x = 0;
-        for (int g = 0; g < groups.length; g++) {
-            if (g > 0) x = colon(canvas, x, big);
-            for (char d : groups[g].toCharArray()) { digit(canvas, d - '0', x, 0, big); x += bigW + gap; }
+        float x = drawTime(canvas, a, 0, big);
+        if (b == null) return;
+        // The divider: a thin slanted bar, like an extra segment.
+        float t = big * 0.11f, x0 = x + big * 0.1f;
+        path.reset();
+        path.moveTo(x0, big);
+        path.lineTo(x0 + big * 0.24f, 0);
+        path.lineTo(x0 + big * 0.24f + t, 0);
+        path.lineTo(x0 + t, big);
+        path.close();
+        canvas.drawPath(path, on);
+        drawTime(canvas, b, x0 + big * 0.24f + t + big * 0.14f, big);
+    }
+
+    private static String timeText(long secs) {
+        long h = secs / 3600, m = secs / 60 % 60, s = secs % 60;
+        return h > 0 ? String.format(Locale.ROOT, "%d:%02d:%02d", h, m, s) : String.format(Locale.ROOT, "%d:%02d", m, s);
+    }
+
+    private static float timeWidth(String s, float big) {
+        float w = 0;
+        for (char ch : s.toCharArray()) w += ch == ':' ? big * 0.19f : big * 0.64f;
+        return w;
+    }
+
+    private float drawTime(Canvas c, String s, float x, float big) {
+        for (char ch : s.toCharArray()) {
+            if (ch == ':') {
+                x = colon(c, x, big);
+            } else {
+                digit(c, ch - '0', x, 0, big);
+                x += big * 0.64f;
+            }
         }
+        return x;
     }
 
     private float colon(Canvas c, float x, float big) {

@@ -133,6 +133,13 @@ final class NowPlaying {
         return a != null ? a : m.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST);
     }
 
+    /** The track's length in seconds, or -1 when the app doesn't share it. */
+    long totalSeconds() {
+        MediaMetadata m = current != null ? current.getMetadata() : null;
+        long d = m != null ? m.getLong(MediaMetadata.METADATA_KEY_DURATION) : 0;
+        return d > 0 ? d / 1000 : -1;
+    }
+
     boolean playing() {
         return stateOf(current) == PlaybackState.STATE_PLAYING;
     }

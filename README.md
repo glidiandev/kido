@@ -98,8 +98,9 @@ KIDŌ is set to, and the TV starts it after the idle time you set there.
 ## Now playing (optional)
 
 When it's on and an app is playing something (Spotify, YouTube Music, a video app), the data block next to
-the clock becomes a NOW PLAYING panel: the title, the artist and the app, how far in you are on a
-seven-segment display, a play or pause mark and a small level meter, all in the app's color. When nothing
+the clock becomes a NOW PLAYING panel: the title, the artist and the app, how far in you are and the
+track's length on a seven-segment display (0:04 / 3:12), a play or pause mark and a small level meter,
+all in the app's color. Titles too long to fit scroll slowly, like a car stereo. When nothing
 plays, the data block comes back.
 
 To control it, press **Up** from the main panels: the panel lights up like any tile, **OK** plays or

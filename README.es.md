@@ -58,7 +58,8 @@ blanco, negro o gris, usa el color de la categoría.
 
 Si lo enciendes y una app está reproduciendo algo (Spotify, YouTube Music, una app de video), el bloque de
 datos junto al reloj se convierte en un panel 音楽 EN REPRODUCCIÓN con el color de la app: título, artista,
-el tiempo transcurrido en siete segmentos y un medidor de nivel. Cuando no suena nada, vuelve el bloque de
+el tiempo transcurrido y la duración en siete segmentos (0:04 / 3:12) y un medidor de nivel. Los títulos
+largos se desplazan despacio, como en el estéreo de un auto. Cuando no suena nada, vuelve el bloque de
 datos. Para controlarlo, pulsa **arriba** desde los paneles de INICIO: **OK** reproduce o pausa,
 **izquierda** y **derecha** cambian de pista (si la app lo permite) y **abajo** o **Atrás** te devuelven. Nunca
 toma el foco por sí solo. También puedes mantener OK sobre la app que suena o usar el botón de
