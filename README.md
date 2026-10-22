@@ -10,7 +10,7 @@ no rows of recommendations, no internet access at all.
 
 *Recorded on a Sharp AQUOS 4K TV. KIDŌ (起動) means "start up".*
 
-**Android TV 8.0+ · 251 KB · no internet permission · English and Spanish · free and open source (MIT)**
+**Android TV 8.0+ · 256 KB · no internet permission · English and Spanish · free and open source (MIT)**
 
 **Try it in your browser:** [glidian.dev/kido/demo](https://glidian.dev/kido/demo/) (arrow keys and Enter are the remote)
 
@@ -25,6 +25,9 @@ no rows of recommendations, no internet access at all.
   `入力検知 INPUT DETECTED` panel drops in with its name; press OK to switch to it.
 - **The HUD.** A seven-segment clock, a live data block (free memory, uptime, inputs), section tabs
   and a footer with a ticking clock and a log of what you've been doing.
+- **Now playing (optional).** While music or a show plays, the data block turns into a 音楽 NOW PLAYING
+  panel in the app's color: title, artist, a seven-segment elapsed time and a level meter
+  (see [below](#now-playing-optional)).
 - **Little things.** A system check once per TV boot, sections that trace themselves in as you arrive,
   a launch screen when you open an app, soft console beeps, a faint hex grid and scanlines.
 - **Smooth motion.** Moves answer the remote at once and settle softly, and the focus glow travels in a
@@ -76,8 +79,8 @@ KIDŌ is set to, and the TV starts it after the idle time you set there.
 |---|---|
 | Arrows | Move around. Left and right run through everything in reading order, from the main panels through the honeycomb to Settings. Up from the honeycomb's first row goes back to the main panels |
 | OK | Open the app or input |
-| Hold OK on an app | Move it, pin it to the main panels, unpin it, or open its app info |
-| Hold OK on Settings | Sound on or off, the Input button helper, and the color theme |
+| Hold OK on an app | Move it, pin it to the main panels, unpin it, or open its app info. On the app that's playing, also PLAY or PAUSE |
+| Hold OK on Settings | Sound on or off, the Input button helper, NOW PLAYING, and the color theme |
 | Back | Return to the main panels |
 | Home | Back to KIDŌ from anywhere, once it's your Home screen |
 | Input | The inputs panel, if you've turned on the [Input button helper](#the-input-button-optional) |
@@ -90,6 +93,38 @@ KIDŌ is set to, and the TV starts it after the idle time you set there.
 3. From the honeycomb's first row, **up** takes it to the main panels: left and right pick which of the
    five to replace, and the app that leaves takes the moved app's place in the honeycomb.
 4. **OK** keeps the new order and **Back** cancels. The order is saved on the TV.
+
+## Now playing (optional)
+
+When it's on and an app is playing something (Spotify, YouTube Music, a video app), the data block next to
+the clock becomes a NOW PLAYING panel: the title, the artist and the app, how far in you are on a
+seven-segment display, a play or pause mark and a small level meter, all in the app's color. When nothing
+plays, the data block comes back. Hold OK on the app that's playing to play or pause it, or use the
+remote's own play/pause button.
+
+It's **off** until you turn it on: hold OK on **Settings** and choose **NOW PLAYING: OFF // TURN ON**.
+
+**What it reads:** only what's playing, the way the TV's own media controls see it: the app, title, artist,
+whether it's playing or paused, and how far in it is. Apps can share more (album art, for one), but KIDŌ
+doesn't use it. Nothing is saved or sent anywhere.
+
+**The permission:** Android only shares what's playing with apps that have *notification access*. That
+access technically lets an app read your notifications too. KIDŌ's listener is an empty shell that never
+looks at them; it's only there because Android asks for one.
+
+When you turn NOW PLAYING on, KIDŌ opens the TV's notification access screen if the TV has one. Many
+Android TVs hide that screen, so KIDŌ also shows the adb command, which is:
+
+```bash
+adb shell cmd notification allow_listener dev.glidian.kido/.NowPlayingListener
+```
+
+To turn it off, use the same menu (**NOW PLAYING: ON // TURN OFF**); KIDŌ stops reading right away. To take
+the access back as well:
+
+```bash
+adb shell cmd notification disallow_listener dev.glidian.kido/.NowPlayingListener
+```
 
 ## The Input button (optional)
 
@@ -209,8 +244,10 @@ KIDŌ has no internet permission, so it can't send anything anywhere. It asks fo
 - `WRITE_SECURE_SETTINGS`, optional. Android never grants it on its own; you grant it over adb, and
   it's only used to switch KIDŌ's own Input button helper on and off.
 
-The Input button helper only listens for that one button and can't read the screen. Your pinned apps,
-honeycomb order, theme and sound setting stay on the TV.
+The Input button helper only listens for that one button and can't read the screen. If you turn on
+[NOW PLAYING](#now-playing-optional), KIDŌ needs notification access to see what's playing; it reads only
+the title, artist, app and play state, and never looks at your notifications. Your pinned apps, honeycomb
+order, theme and settings stay on the TV.
 
 ## Tested on
 

@@ -14,7 +14,7 @@ cada app.
 
 ![Pantalla principal en español](docs/es-inicio.jpg)
 
-**Android TV 8.0+ · 251 KB · sin permiso de internet · español e inglés · libre y de código abierto (MIT)**
+**Android TV 8.0+ · 256 KB · sin permiso de internet · español e inglés · libre y de código abierto (MIT)**
 
 ## Qué hay en pantalla
 
@@ -54,6 +54,34 @@ El color de la línea bajo el nombre, del brillo y del bloque de estado sale del
 analiza su banner, agrupa los píxeles de color por tono y elige el más vivo y abundante. Si el logo es
 blanco, negro o gris, usa el color de la categoría.
 
+## En reproducción (opcional)
+
+Si lo enciendes y una app está reproduciendo algo (Spotify, YouTube Music, una app de video), el bloque de
+datos junto al reloj se convierte en un panel 音楽 EN REPRODUCCIÓN con el color de la app: título, artista,
+el tiempo transcurrido en siete segmentos y un medidor de nivel. Cuando no suena nada, vuelve el bloque de
+datos. Mantén OK sobre la app que suena para reproducir o pausar, o usa el botón de reproducir/pausa del
+control.
+
+Viene **apagado**: mantén OK sobre **AJUSTES** y elige **EN REPRODUCCIÓN: NO // ENCENDER**.
+
+**Qué lee:** solo lo que suena, igual que los controles multimedia del TV: la app, el título, el artista,
+si está en reproducción o en pausa y por dónde va. No guarda ni envía nada.
+
+**El permiso:** Android solo comparte lo que suena con apps que tienen *acceso a notificaciones*, un acceso
+que técnicamente también permite leer las notificaciones. El servicio de KIDŌ está vacío y nunca las mira.
+Al encenderlo, KIDŌ abre la pantalla de acceso a notificaciones si el TV la tiene; muchos televisores la
+ocultan, así que también muestra el comando de ADB:
+
+```
+adb shell cmd notification allow_listener dev.glidian.kido/.NowPlayingListener
+```
+
+Para apagarlo, usa el mismo menú. Para retirar también el acceso:
+
+```
+adb shell cmd notification disallow_listener dev.glidian.kido/.NowPlayingListener
+```
+
 ## Panel de entradas y botón Input
 
 ![Panel de entradas](docs/es-entradas.jpg)
@@ -90,8 +118,8 @@ adb shell pm revoke dev.glidian.kido android.permission.WRITE_SECURE_SETTINGS
 | -------------------------- | -------------------------------------------------------------------------------------------- |
 | Flechas                    | Moverse. Arriba desde la primera fila de APPS vuelve a INICIO                                 |
 | OK                         | Abrir la app o la entrada                                                                    |
-| Mantener OK sobre una app  | **MOVER**, fijar en INICIO, quitar de INICIO o ver la información de la app                  |
-| Mantener OK sobre Ajustes  | Sonido, botón Input y tema de color                                                           |
+| Mantener OK sobre una app  | **MOVER**, fijar en INICIO, quitar de INICIO o ver la información de la app. En la app que suena, también reproducir o pausar |
+| Mantener OK sobre Ajustes  | Sonido, botón Input, EN REPRODUCCIÓN y tema de color                                          |
 | Atrás                      | Volver a los paneles principales                                                             |
 | Home                       | Volver a KIDŌ desde cualquier lugar, una vez que es tu pantalla de inicio                    |
 | Input                      | Panel de entradas (si el ayudante está activo)                                               |
@@ -153,7 +181,8 @@ Si encendiste el ayudante del botón Input, apágalo antes desde el menú de aju
 KIDŌ no tiene permiso de internet, así que no puede enviar nada. Pide `ACCESS_NETWORK_STATE` y
 `ACCESS_WIFI_STATE` solo para la señal Wi-Fi de las lecturas, y `WRITE_SECURE_SETTINGS` (opcional,
 concedido por ADB) solo para el interruptor del botón Input. El ayudante de accesibilidad solo atiende el
-botón Input y no lee el contenido de la pantalla. Tus favoritos, el orden del panal, el tema y el sonido
+botón Input y no lee el contenido de la pantalla. Si enciendes EN REPRODUCCIÓN, KIDŌ necesita acceso a
+notificaciones para ver qué suena; solo lee título, artista, app y estado, y nunca mira tus notificaciones. Tus favoritos, el orden del panal, el tema y el sonido
 se quedan en el TV.
 
 ## Probado en
