@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Spanish translation by Frankdu98. Each label was checked against the bundled fonts so it fits its slot. -->
+<resources>
+    <string name="dream_name">KIDŌ En espera</string>
+    <string name="input_service_name">KIDŌ botón Input</string>
+    <string name="input_service_description">Abre el panel de entradas de KIDŌ con el botón Input del control. Solo atiende ese botón.</string>
+
+    <string name="date_locale">es</string>
+
+    <string name="zone_main">SELECCIÓN PRINCIPAL</string>
+    <string name="zone_main_tab">INICIO</string>
+    <string name="zone_apps">APLICACIONES</string>
+    <string name="zone_apps_tab">APPS</string>
+    <string name="zone_system">CONTROL DEL SISTEMA</string>
+    <string name="zone_system_tab">SISTEMA</string>
+
+    <string name="favorites_count">FAVORITOS // %02d CARGADOS</string>
+    <string name="read_updated">ACTUALIZ.</string>
+    <string name="read_link">SEÑAL</string>
+    <string name="ready">LISTO</string>
+    <string name="ads">ANUNC. 0</string>
+    <string name="launch_name">ABRIR %s</string>
+
+    <string name="channels_count">CANALES // %02d EN LÍNEA</string>
+    <string name="link_status">ESTADO DE ENLACE</string>
+    <string name="more_channels">MÁS CANALES</string>
+    <string name="link_ok">CH.%s // ENLACE OK</string>
+
+    <string name="inputs_count">ENTRADAS EXTERNAS // %d PUERTOS</string>
+    <string name="port_n">PUERTO %d</string>
+    <string name="linked">CONECTADO</string>
+    <string name="linked_short">CONECT.</string>
+    <string name="empty">LIBRE</string>
+    <string name="input">ENTRADA</string>
+    <string name="wireless">INALÁMBRICO</string>
+    <string name="settings">AJUSTES</string>
+    <string name="wifi_home">HOGAR</string>
+    <string name="wifi_network">RED</string>
+    <string name="settings_system">SISTEMA</string>
+    <string name="settings_config">CONFIG.</string>
+    <string name="opening_wifi">ABRIENDO WI-FI</string>
+    <string name="opening_settings">ABRIENDO AJUSTES</string>
+    <string name="switching_to">CAMBIANDO A %s</string>
+    <string name="system_hint">EN ESPERA. ELIGE UNA FUENTE O UN AJUSTE.   MANTÉN OK EN AJUSTES PARA SONIDO Y TEMA.</string>
+    <string name="cant_open">No se puede abrir aquí</string>
+
+    <string name="local_time">HORA LOCAL:</string>
+    <string name="data_labels">VERIF.\nMEM LIBRE\nACTIVO\nENTRADAS</string>
+    <string name="system_nominal">SISTEMA NORMAL</string>
+    <string name="sys_check_log">VERIF. %1$04d // PARIDAD %2$04X // OK</string>
+
+    <string name="wifi_strong">FUERTE</string>
+    <string name="wifi_good">BUENA</string>
+    <string name="wifi_fair">REGULAR</string>
+    <string name="wifi_weak">DÉBIL</string>
+    <string name="wired_ok">CABLE // OK</string>
+    <string name="wired">CABLE</string>
+    <string name="no_link">SIN ENLACE</string>
+    <string name="offline">SIN RED</string>
+
+    <string-array name="launch_phases">
+        <item>ENLACE</item>
+        <item>AUTENT.</item>
+        <item>BÚFER</item>
+        <item>DECODIF.</item>
+        <item>AUDIO</item>
+        <item>VIDEO</item>
+        <item>SINCRO</item>
+        <item>LISTO</item>
+    </string-array>
+    <string name="launch_sequence">INICIANDO // %s</string>
+    <string name="phase_wait">" ESPERA"</string>
+
+    <string name="standby">EN ESPERA</string>
+    <string name="standby_detail">EN ESPERA // SIN ACTIVIDAD</string>
+    <string name="idle">INACTIVO</string>
+
+    <string name="hold_ok_options">MANTÉN OK // OPCIONES</string>
+    <string name="options">OPCIONES</string>
+    <string name="menu_move">MOVER</string>
+    <string name="menu_unpin">QUITAR DE INICIO</string>
+    <string name="menu_pin">FIJAR EN INICIO</string>
+    <string name="menu_pin_replaces">FIJAR // REEMPLAZA A %s</string>
+    <string name="menu_info">INFORMACIÓN DE LA APP</string>
+    <string name="menu_sound_on">SONIDO ACTIVADO // DESACTIVAR</string>
+    <string name="menu_sound_off">SONIDO DESACTIVADO // ACTIVAR</string>
+    <string name="menu_input_on">BOTÓN INPUT: SÍ // APAGAR</string>
+    <string name="menu_input_off">BOTÓN INPUT: NO // ENCENDER</string>
+    <string name="menu_theme">TEMA // %s</string>
+    <string-array name="theme_names">
+        <item>ESTÁNDAR</item>
+        <item>ALERTA</item>
+        <item>VIOLETA</item>
+    </string-array>
+
+    <string name="move_hint">◀▶▲▼ UBICAR // OK SOLTAR // ATRÁS CANCELAR</string>
+    <string name="moving">MOVIENDO</string>
+    <string name="move_pick">%s // ELIGE EL LUGAR</string>
+    <string name="move_drop">OK SOLTAR</string>
+    <string name="swap">CAMBIAR</string>
+    <string name="swap_for">%1$s // POR %2$s</string>
+    <string name="swap_ok">OK CAMBIAR</string>
+
+    <string name="sound_on_toast">SONIDO ACTIVADO. MANTÉN OK EN AJUSTES PARA SILENCIAR.</string>
+    <string name="sound_off_toast">SONIDO DESACTIVADO. MANTÉN OK EN AJUSTES PARA VOLVER A ACTIVARLO.</string>
+    <string name="input_on_toast">BOTÓN INPUT ENCENDIDO. EL VOLUMEN SUBE UN PASO POR PULSACIÓN.</string>
+    <string name="input_off_toast">BOTÓN INPUT APAGADO. EL VOLUMEN VUELVE A SUBIR SEGUIDO.</string>
+    <string name="input_no_permission">FALTA EL PERMISO: pm grant dev.glidian.kido android.permission.WRITE_SECURE_SETTINGS</string>
+
+    <string name="input_detected">ENTRADA DETECTADA</string>
+    <string name="signal_locked">%s // SEÑAL DETECTADA</string>
+    <string name="alert_keys">OK  CAMBIAR AHORA      ATRÁS  DESCARTAR</string>
+
+    <string name="system_check">VERIFICACIÓN DEL SISTEMA</string>
+    <string name="subsystem">SUBSISTEMA %02d</string>
+    <string name="approved">承認 APROBADO</string>
+    <string name="check_display">PANTALLA // %1$dx%2$d</string>
+    <string name="check_inputs">BUS DE ENTRADA // %d PUERTOS</string>
+    <string name="check_channels">CANALES // %d CARGADOS</string>
+    <string name="check_memory">MEMORIA LIBRE // %d MB</string>
+    <string name="all_nominal">TODOS LOS SISTEMAS NORMALES</string>
+    <string name="build_credit">VERSIÓN // GLIDIAN.DEV</string>
+
+    <string name="log_focus">FOCO %s</string>
+    <string name="log_sector">SECTOR %1$02d %2$s</string>
+    <string name="log_launch">ABRIR CH.%1$s %2$s</string>
+    <string name="log_options">OPCIONES CH.%1$s %2$s</string>
+    <string name="log_theme">TEMA %s</string>
+    <string name="log_pinned">FIJADO %s</string>
+    <string name="log_unpinned">QUITADO %s</string>
+    <string name="log_moved">MOVIDO %s</string>
+    <string name="log_move">MOVER %s</string>
+    <string name="log_unchanged">SIN CAMBIOS %s</string>
+    <string name="log_swap">CAMBIO %1$s // %2$s</string>
+    <string name="log_sound_on">SONIDO ACTIVADO</string>
+    <string name="log_sound_off">SONIDO DESACTIVADO</string>
+    <string name="log_input_on">BOTÓN INPUT SÍ</string>
+    <string name="log_input_off">BOTÓN INPUT NO</string>
+    <string name="log_alert">ALERTA // ENTRADA DETECTADA %s</string>
+    <string name="log_boot">ARRANQUE COMPLETO // TODOS LOS SISTEMAS NORMALES</string>
+
+    <string name="dream_title">EN ESPERA // KIDŌ v%s</string>
+    <string name="dream_data">ACTIVO %1$02d:%2$02d:%3$02d   //   MEM LIBRE %4$d MB   //   SIN ACTIVIDAD</string>
+
+    <string name="panel_title">ENTRADAS</string>
+    <string name="panel_hint">ELIGE UNA FUENTE // ATRÁS CERRAR</string>
+    <string name="panel_none">SIN ENTRADAS</string>
+    <string name="analog">ANALÓGICA</string>
+    <string name="antenna_cable">ANTENA // CABLE</string>
+    <string name="cant_open_input">No se puede abrir esa entrada</string>
+
+    <string name="cat_film">CINE</string>
+    <string name="cat_series">SERIES</string>
+    <string name="cat_family">FAMILIA</string>
+    <string name="cat_video">VIDEO</string>
+    <string name="cat_anime">ANIME</string>
+    <string name="cat_music">MÚSICA</string>
+    <string name="cat_games">JUEGOS</string>
+    <string name="cat_store">TIENDA</string>
+    <string name="cat_player">REPRODUCTOR</string>
+    <string name="cat_news">NOTICIAS</string>
+    <string name="cat_photos">FOTOS</string>
+    <string name="cat_casting">PROYECCIÓN</string>
+    <string name="cat_live">TV EN VIVO</string>
+    <string name="cat_tools">HERRAMIENTAS</string>
+    <string name="cat_browser">NAVEGADOR</string>
+    <string name="cat_sports">DEPORTES</string>
+    <string name="cat_wallpaper">FONDOS</string>
+    <string name="cat_app">APP</string>
+</resources>

@@ -1,7 +1,189 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- English (the default). The Spanish translation is in values-es. Kanji are part of the design and live in code. -->
 <resources>
-    <string name="app_name">KIDŌ</string>
-    <string name="dream_name">KIDŌ En espera</string>
-    <string name="input_service_name">KIDŌ botón Input</string>
-    <string name="input_service_description">Abre el panel de entradas de KIDŌ con el botón Input del control. Solo atiende ese botón.</string>
+    <string name="app_name" translatable="false">KIDŌ</string>
+    <string name="dream_name">KIDŌ Standby</string>
+    <string name="input_service_name">KIDŌ Input button</string>
+    <string name="input_service_description">Opens KIDŌ\'s inputs panel with the remote\'s Input button. It only listens for that button.</string>
+
+    <!-- The language dates are written in, so they match the rest of the screen. -->
+    <string name="date_locale">en</string>
+
+    <!-- Sections: the title, and the short name on the tabs and in the footer. -->
+    <string name="zone_main">MAIN SELECTION</string>
+    <string name="zone_main_tab">MAIN</string>
+    <string name="zone_apps">APPLICATIONS</string>
+    <string name="zone_apps_tab">APPS</string>
+    <string name="zone_system">SYSTEM CONTROL</string>
+    <string name="zone_system_tab">SYSTEM</string>
+
+    <!-- Main panels -->
+    <string name="favorites_count">FAVORITES // %02d LOADED</string>
+    <string name="read_updated">UPDATED</string>
+    <string name="read_link">LINK</string>
+    <string name="ready">READY</string>
+    <string name="ads">ADS 0</string>
+    <string name="launch_name">LAUNCH %s</string>
+
+    <!-- Honeycomb -->
+    <string name="channels_count">CHANNELS // %02d ONLINE</string>
+    <string name="link_status">LINK STATUS</string>
+    <string name="more_channels">MORE CHANNELS</string>
+    <string name="link_ok">CH.%s // LINK OK</string>
+
+    <!-- Inputs and settings -->
+    <string name="inputs_count">EXTERNAL INPUT // %d PORTS</string>
+    <string name="port_n">PORT %d</string>
+    <string name="linked">LINKED</string>
+    <string name="linked_short">LINKED</string>
+    <string name="empty">EMPTY</string>
+    <string name="input">INPUT</string>
+    <string name="wireless">WIRELESS</string>
+    <string name="settings">SETTINGS</string>
+    <string name="wifi_home">HOME</string>
+    <string name="wifi_network">NETWORK</string>
+    <string name="settings_system">SYSTEM</string>
+    <string name="settings_config">CONFIG</string>
+    <string name="opening_wifi">OPENING WI-FI</string>
+    <string name="opening_settings">OPENING SETTINGS</string>
+    <string name="switching_to">SWITCHING TO %s</string>
+    <string name="system_hint">STANDBY. SELECT A SOURCE OR SETTING.   HOLD OK ON SETTINGS FOR SOUND AND THEME.</string>
+    <string name="cant_open">Can\'t open that here</string>
+
+    <!-- Clock and data block -->
+    <string name="local_time">LOCAL TIME:</string>
+    <string name="data_labels">SYS-CHK\nFREE MEM\nUPTIME\nINPUTS</string>
+    <string name="system_nominal">SYSTEM NOMINAL</string>
+    <string name="sys_check_log">SYS-CHK %1$04d // PARITY %2$04X // OK</string>
+
+    <!-- Wi-Fi readouts -->
+    <string name="wifi_strong">STRONG</string>
+    <string name="wifi_good">GOOD</string>
+    <string name="wifi_fair">FAIR</string>
+    <string name="wifi_weak">WEAK</string>
+    <string name="wired_ok">WIRED // OK</string>
+    <string name="wired">WIRED</string>
+    <string name="no_link">NO LINK</string>
+    <string name="offline">OFFLINE</string>
+
+    <!-- Launch screen. The steps light up one by one while the app opens. -->
+    <string-array name="launch_phases">
+        <item>LINK</item>
+        <item>AUTH</item>
+        <item>BUFFER</item>
+        <item>DECODE</item>
+        <item>AUDIO</item>
+        <item>VIDEO</item>
+        <item>SYNC</item>
+        <item>READY</item>
+    </string-array>
+    <string name="launch_sequence">LAUNCH SEQUENCE // %s</string>
+    <string name="phase_wait">"  WAIT"</string>
+
+    <!-- Standby when the remote is idle -->
+    <string name="standby">STANDBY</string>
+    <string name="standby_detail">HOLDING // NO INPUT</string>
+    <string name="idle">IDLE</string>
+
+    <!-- Options menus -->
+    <string name="hold_ok_options">HOLD OK // OPTIONS</string>
+    <string name="options">OPTIONS</string>
+    <string name="menu_move">MOVE</string>
+    <string name="menu_unpin">UNPIN FROM MAIN</string>
+    <string name="menu_pin">PIN TO MAIN</string>
+    <string name="menu_pin_replaces">PIN // REPLACES %s</string>
+    <string name="menu_info">APP INFO</string>
+    <string name="menu_sound_on">SOUND ON // TURN OFF</string>
+    <string name="menu_sound_off">SOUND OFF // TURN ON</string>
+    <string name="menu_input_on">INPUT BUTTON: ON // TURN OFF</string>
+    <string name="menu_input_off">INPUT BUTTON: OFF // TURN ON</string>
+    <string name="menu_theme">THEME // %s</string>
+    <string-array name="theme_names">
+        <item>STANDARD</item>
+        <item>ALERT</item>
+        <item>VIOLET</item>
+    </string-array>
+
+    <!-- Moving an app -->
+    <string name="move_hint">◀▶▲▼ PLACE // OK DROP // BACK CANCEL</string>
+    <string name="moving">MOVING</string>
+    <string name="move_pick">%s // PICK A SPOT</string>
+    <string name="move_drop">OK DROP</string>
+    <string name="swap">SWAP</string>
+    <string name="swap_for">%1$s // FOR %2$s</string>
+    <string name="swap_ok">OK SWAP</string>
+
+    <!-- Toasts in the system strip -->
+    <string name="sound_on_toast">SOUND ON. HOLD OK ON SETTINGS TO MUTE.</string>
+    <string name="sound_off_toast">SOUND OFF. HOLD OK ON SETTINGS TO TURN IT BACK ON.</string>
+    <string name="input_on_toast">INPUT BUTTON ON. VOLUME NOW STEPS ONCE PER PRESS.</string>
+    <string name="input_off_toast">INPUT BUTTON OFF. HOLDING VOLUME REPEATS AGAIN.</string>
+    <string name="input_no_permission">NEEDS PERMISSION: pm grant dev.glidian.kido android.permission.WRITE_SECURE_SETTINGS</string>
+
+    <!-- Input alert -->
+    <string name="input_detected">INPUT DETECTED</string>
+    <string name="signal_locked">%s // SIGNAL LOCKED</string>
+    <string name="alert_keys">OK  SWITCH NOW      BACK  DISMISS</string>
+
+    <!-- Boot check -->
+    <string name="system_check">SYSTEM CHECK</string>
+    <string name="subsystem">SUBSYSTEM %02d</string>
+    <string name="approved">承認 APPROVED</string>
+    <string name="check_display">DISPLAY // %1$dx%2$d</string>
+    <string name="check_inputs">INPUT BUS // %d PORTS</string>
+    <string name="check_channels">CHANNELS // %d LOADED</string>
+    <string name="check_memory">FREE MEMORY // %d MB</string>
+    <string name="all_nominal">ALL SYSTEMS NOMINAL</string>
+    <string name="build_credit">BUILD // GLIDIAN.DEV</string>
+
+    <!-- The footer log -->
+    <string name="log_focus">FOCUS %s</string>
+    <string name="log_sector">SECTOR %1$02d %2$s</string>
+    <string name="log_launch">LAUNCH CH.%1$s %2$s</string>
+    <string name="log_options">OPTIONS CH.%1$s %2$s</string>
+    <string name="log_theme">THEME %s</string>
+    <string name="log_pinned">PINNED %s</string>
+    <string name="log_unpinned">UNPINNED %s</string>
+    <string name="log_moved">MOVED %s</string>
+    <string name="log_move">MOVE %s</string>
+    <string name="log_unchanged">NO CHANGE %s</string>
+    <string name="log_swap">SWAP %1$s // %2$s</string>
+    <string name="log_sound_on">SOUND ON</string>
+    <string name="log_sound_off">SOUND OFF</string>
+    <string name="log_input_on">INPUT BUTTON ON</string>
+    <string name="log_input_off">INPUT BUTTON OFF</string>
+    <string name="log_alert">ALERT // INPUT DETECTED %s</string>
+    <string name="log_boot">BOOT CHECK COMPLETE // ALL SYSTEMS NOMINAL</string>
+
+    <!-- Screensaver -->
+    <string name="dream_title">STANDBY // KIDŌ v%s</string>
+    <string name="dream_data">UPTIME %1$02d:%2$02d:%3$02d   //   FREE MEM %4$d MB   //   NO INPUT</string>
+
+    <!-- Inputs panel -->
+    <string name="panel_title">INPUTS</string>
+    <string name="panel_hint">SELECT A SOURCE // BACK CLOSES</string>
+    <string name="panel_none">NO INPUTS</string>
+    <string name="analog">ANALOG</string>
+    <string name="antenna_cable">ANTENNA // CABLE</string>
+    <string name="cant_open_input">Can\'t open that input</string>
+
+    <!-- App categories, shown beside their kanji -->
+    <string name="cat_film">FILM</string>
+    <string name="cat_series">SERIES</string>
+    <string name="cat_family">FAMILY</string>
+    <string name="cat_video">VIDEO</string>
+    <string name="cat_anime">ANIME</string>
+    <string name="cat_music">MUSIC</string>
+    <string name="cat_games">GAMES</string>
+    <string name="cat_store">STORE</string>
+    <string name="cat_player">PLAYER</string>
+    <string name="cat_news">NEWS</string>
+    <string name="cat_photos">PHOTOS</string>
+    <string name="cat_casting">CASTING</string>
+    <string name="cat_live">LIVE TV</string>
+    <string name="cat_tools">TOOLS</string>
+    <string name="cat_browser">BROWSER</string>
+    <string name="cat_sports">SPORTS</string>
+    <string name="cat_wallpaper">WALLPAPER</string>
+    <string name="cat_app">APP</string>
 </resources>

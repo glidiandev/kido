@@ -67,9 +67,9 @@ public class InputPanelActivity extends Activity {
         head.addView(text("入力", Kido.mincho, 64, Kido.AMBER, 0));
         View gap = new View(this);
         head.addView(gap, new LinearLayout.LayoutParams(Kido.px(18), 1));
-        head.addView(text("ENTRADAS", Kido.condBold, 38, Kido.INK, 0.16f));
+        head.addView(text(getString(R.string.panel_title), Kido.condBold, 38, Kido.INK, 0.16f));
         panel.addView(head);
-        TextView sub = text("ELIGE UNA FUENTE // ATRÁS CERRAR", Kido.mono, 20, Kido.DIM, 0.06f);
+        TextView sub = text(getString(R.string.panel_hint), Kido.mono, 20, Kido.DIM, 0.06f);
         sub.setPadding(0, Kido.px(8), 0, Kido.px(22));
         panel.addView(sub);
 
@@ -81,11 +81,8 @@ public class InputPanelActivity extends Activity {
             panel.addView(r, lp);
             rows.add(r);
         }
-        if (rows.isEmpty()) panel.addView(text("SIN ENTRADAS", Kido.condBold, 30, Kido.DIM, 0.12f));
-        for (int i = 0; i < rows.size(); i++) {
-            View r = rows.get(i);
-            r.setId(View.generateViewId());
-        }
+        if (rows.isEmpty()) panel.addView(text(getString(R.string.panel_none), Kido.condBold, 30, Kido.DIM, 0.12f));
+        for (View r : rows) r.setId(View.generateViewId());
         for (int i = 0; i < rows.size(); i++) {
             View r = rows.get(i);
             r.setNextFocusLeftId(r.getId());
@@ -164,6 +161,7 @@ public class InputPanelActivity extends Activity {
             }
         }
         Collections.sort(ports, (a, b) -> label(a).compareToIgnoreCase(label(b)));
+        String linkedText = getString(R.string.linked), emptyText = getString(R.string.empty);
         int n = 1;
         for (TvInputInfo p : ports) {
             String port = label(p);
@@ -176,17 +174,19 @@ public class InputPanelActivity extends Activity {
             }
             if (dev == null) dev = name(p, false);
             boolean linked = tim.getInputState(p.getId()) == TvInputManager.INPUT_STATE_CONNECTED || hasChild(all, p.getId());
-            out.add(new Entry("入力", dev != null ? dev : port, dev != null ? port : "PUERTO " + n, linked ? "CONECTADO" : "LIBRE",
-                    passthrough(p.getId())));
+            out.add(new Entry("入力", dev != null ? dev : port,
+                    dev != null ? port : String.format(Locale.ROOT, getString(R.string.port_n), n),
+                    linked ? linkedText : emptyText, passthrough(p.getId())));
             n++;
         }
         for (TvInputInfo a : av) {
             String l = label(a);
-            out.add(new Entry("入力", l.isEmpty() ? "AV" : l, "ANALÓGICA", tim.getInputState(a.getId()) == TvInputManager.INPUT_STATE_CONNECTED ? "CONECTADO" : "LIBRE",
+            boolean linked = tim.getInputState(a.getId()) == TvInputManager.INPUT_STATE_CONNECTED;
+            out.add(new Entry("入力", l.isEmpty() ? "AV" : l, getString(R.string.analog), linked ? linkedText : emptyText,
                     passthrough(a.getId())));
         }
         Intent tv = getPackageManager().getLeanbackLaunchIntentForPackage("com.mediatek.wwtv.tvcenter");
-        if (tv != null) out.add(new Entry("放送", "TV", "ANTENA // CABLE", "", tv));
+        if (tv != null) out.add(new Entry("放送", "TV", getString(R.string.antenna_cable), "", tv));
         return out;
     }
 
@@ -252,7 +252,7 @@ public class InputPanelActivity extends Activity {
             try {
                 startActivity(e.intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             } catch (RuntimeException ex) {
-                Toast.makeText(this, "No se puede abrir esa entrada", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, R.string.cant_open_input, Toast.LENGTH_SHORT).show();
             }
             finish();
             overridePendingTransition(0, 0);

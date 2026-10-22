@@ -4,11 +4,15 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.drawable.Drawable;
 import android.view.View;
 
 import java.util.Locale;
 
-/** A pointy-top hexagon tile for the honeycomb: channel code, app name and a brand-colored dot. */
+/**
+ * A pointy-top hexagon tile for the honeycomb: channel code, app name and a brand-colored dot. When the app
+ * has a themed emblem, the emblem sits in the middle in the app's color and the name moves down under it.
+ */
 final class HexView extends View {
     final Kido.Look look;
     private final String code;
@@ -18,6 +22,7 @@ final class HexView extends View {
     private final Paint namePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint dot = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path outer = new Path(), inner = new Path();
+    private final Drawable emblem;
 
     HexView(Context c, Kido.Look look, String code) {
         super(c);
@@ -30,6 +35,7 @@ final class HexView extends View {
         namePaint.setTypeface(Kido.mincho);
         namePaint.setTextAlign(Paint.Align.CENTER);
         dot.setColor(look.glow);
+        emblem = look.emblem != 0 ? c.getDrawable(look.emblem).mutate() : null;
     }
 
     @Override
@@ -69,17 +75,29 @@ final class HexView extends View {
         float w = getWidth(), h = getHeight();
         codePaint.setColor(f ? 0xFF1A0D00 : Kido.DIM);
         codePaint.setTextSize(Kido.px(22));
-        c.drawText(code, w / 2, h * 0.36f, codePaint);
+        c.drawText(code, w / 2, h * (emblem != null ? 0.25f : 0.36f), codePaint);
+
+        if (emblem != null) {
+            // Fit the emblem in a box under the code, keeping its shape.
+            float boxW = w * 0.5f, boxH = h * 0.27f, top = h * 0.29f;
+            float iw = Math.max(1, emblem.getIntrinsicWidth()), ih = Math.max(1, emblem.getIntrinsicHeight());
+            float k = Math.min(boxW / iw, boxH / ih);
+            int ew = Math.round(iw * k), eh = Math.round(ih * k);
+            int left = Math.round((w - ew) / 2), y = Math.round(top + (boxH - eh) / 2);
+            emblem.setBounds(left, y, left + ew, y + eh);
+            emblem.setTint(f ? Kido.DARK_TEXT : look.glow);
+            emblem.draw(c);
+        }
 
         // Fit the name: one line, shrinking long names rather than wrapping.
         String name = look.name.toUpperCase(Locale.ROOT);
-        float size = Kido.px(34);
+        float size = Kido.px(emblem != null ? 26 : 34);
         namePaint.setTextSize(size);
         float max = w * 0.78f;
         float width = namePaint.measureText(name);
         if (width > max) namePaint.setTextSize(size * max / width);
         namePaint.setColor(f ? Kido.DARK_TEXT : Kido.CREAM);
-        c.drawText(name, w / 2, h * 0.57f, namePaint);
+        c.drawText(name, w / 2, h * (emblem != null ? 0.665f : 0.57f), namePaint);
 
         if (f) {
             dot.setColor(0xFF120800);
@@ -89,6 +107,7 @@ final class HexView extends View {
             dot.setShadowLayer(Kido.px(10), 0, 0, look.glow);
         }
         float dw = Kido.px(46), dh = Kido.px(7);
-        c.drawRect(w / 2 - dw / 2, h * 0.66f, w / 2 + dw / 2, h * 0.66f + dh, dot);
+        float dy = h * (emblem != null ? 0.715f : 0.66f);
+        c.drawRect(w / 2 - dw / 2, dy, w / 2 + dw / 2, dy + dh, dot);
     }
 }

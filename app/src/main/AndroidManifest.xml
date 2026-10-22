@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
@@ -8,8 +9,11 @@
     <!-- Wi-Fi strength and link speed for the signal readouts. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    <!-- Only to switch KIDŌ's own Input button helper on and off from its settings menu; granted over ADB. -->
-    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
+    <!-- Optional. Only lets the settings menu switch KIDŌ's own Input button helper on and off. Android never
+         grants it to an installed app by itself: the user grants it once over ADB, and can revoke it. -->
+    <uses-permission
+        android:name="android.permission.WRITE_SECURE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
 
     <!-- Android 11+ package visibility: the TV apps KIDŌ shows as panels and hexes. -->
     <queries>
@@ -64,7 +68,7 @@
             </intent-filter>
         </activity>
 
-        <!-- Opt-in key helper for the Input button (enabled over ADB). It reads no screen content. -->
+        <!-- Opt-in key helper for the Input button, off until the user turns it on. It reads no screen content. -->
         <service
             android:name=".InputKeyService"
             android:label="@string/input_service_name"

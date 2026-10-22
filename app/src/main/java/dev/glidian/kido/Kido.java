@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -11,6 +12,7 @@ import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /** Shared look for KIDŌ: palette, fonts, the 1920x1080 design grid and the app catalog. */
@@ -26,8 +28,8 @@ final class Kido {
     static int DIM;     // amber at 42%
     static int LINE;    // amber at 28%
 
-    /** Theme names as shown in the settings menu: kanji, English. */
-    static final String[][] THEMES = {{"標準", "ESTÁNDAR"}, {"警報", "ALERTA"}, {"紫電", "VIOLETA"}};
+    /** Theme kanji for the settings menu; the names beside them are in R.array.theme_names. */
+    static final String[] THEME_KANJI = {"標準", "警報", "紫電"};
 
     // Per theme: amber (main text and lines), orange (focus fill), red (active tab, alerts), green (OK readouts),
     // lime (inactive tabs), ink (bright text), cream (names), focus rim.
@@ -76,41 +78,115 @@ final class Kido {
         return Math.round(designPx * scale);
     }
 
-    /** What KIDŌ knows about an app: its name, a category label in kanji and English, and a brand color. */
+    /** Dates are written in the language of the interface, so a day name never lands in another language. */
+    static Locale dateLocale(Context c) {
+        return Locale.forLanguageTag(c.getString(R.string.date_locale));
+    }
+
+    /**
+     * App categories: the kanji, the name shown beside it (translated in strings.xml) and the color used when
+     * an app's own logo has none to offer. The kanji are ones the Mincho subset in res/font carries.
+     */
+    enum Cat {
+        FILM("映画", R.string.cat_film, 0xFFE50914),
+        SERIES("番組", R.string.cat_series, 0xFF2D55FF),
+        FAMILY("家族", R.string.cat_family, 0xFF3B5BFF),
+        VIDEO("動画", R.string.cat_video, 0xFFFF2A3D),
+        ANIME("アニメ", R.string.cat_anime, 0xFFF47521),
+        MUSIC("音楽", R.string.cat_music, 0xFF1DB954),
+        GAMES("遊戯", R.string.cat_games, 0xFF66C0F4),
+        STORE("店", R.string.cat_store, 0xFF01A971),
+        PLAYER("再生", R.string.cat_player, 0xFFFFB21E),
+        NEWS("情報", R.string.cat_news, 0xFF4FA3FF),
+        PHOTOS("写真", R.string.cat_photos, 0xFFFFC23D),
+        CASTING("映写", R.string.cat_casting, 0xFF3BD1C8),
+        LIVE("生放送", R.string.cat_live, 0xFFFF5A36),
+        TOOLS("操作", R.string.cat_tools, 0xFF9AA7B0),
+        BROWSER("網", R.string.cat_browser, 0xFF4FA3FF),
+        SPORTS("放送", R.string.cat_sports, 0xFF3BD16F),
+        WALLPAPER("写真", R.string.cat_wallpaper, 0xFFFFC23D),
+        APP("アプリ", R.string.cat_app, 0);
+
+        final String kanji;
+        final int label, color;
+
+        Cat(String kanji, int label, int color) {
+            this.kanji = kanji;
+            this.label = label;
+            this.color = color;
+        }
+    }
+
+    /**
+     * What KIDŌ shows for an app: its name, a category in kanji and words, a brand color, and an optional
+     * white emblem drawn tinted on the panels and hexes (0 when there is none).
+     */
     static final class Look {
         final String name, kanji, category;
-        final int glow;
+        final int glow, emblem;
 
-        Look(String name, String kanji, String category, int glow) {
+        Look(String name, String kanji, String category, int glow, int emblem) {
             this.name = name;
             this.kanji = kanji;
             this.category = category;
             this.glow = glow;
+            this.emblem = emblem;
         }
     }
 
-    private static final Map<String, Look> LOOKS = new HashMap<>();
+    /** A catalog entry. A null name keeps the app's own label, which the TV already shows in its language. */
+    private static final class Known {
+        final String name, slug;
+        final Cat cat;
+        final int glow;
 
-    private static void look(String pkg, String name, String kanji, String category, int glow) {
-        LOOKS.put(pkg, new Look(name, kanji, category, glow));
+        Known(String name, String slug, Cat cat, int glow) {
+            this.name = name;
+            this.slug = slug;
+            this.cat = cat;
+            this.glow = glow;
+        }
+    }
+
+    private static final Map<String, Known> LOOKS = new HashMap<>();
+
+    private static void look(String pkg, String name, String slug, Cat cat, int glow) {
+        LOOKS.put(pkg, new Known(name, slug, cat, glow));
     }
 
     static {
-        look("com.netflix.ninja", "Netflix", "映画", "CINE", 0xFFE50914);
-        look("com.amazon.amazonvideo.livingroom", "Prime Video", "映画", "CINE", 0xFF00A8E1);
-        look("com.wbd.stream", "HBO Max", "番組", "SERIES", 0xFF2D55FF);
-        look("com.disney.disneyplus", "Disney+", "番組", "SERIES", 0xFF3B5BFF);
-        look("com.google.android.youtube.tv", "YouTube", "動画", "VIDEO", 0xFFFF2A3D);
-        look("com.hulu.livingroomplus", "Hulu", "番組", "SERIES", 0xFF1CE783);
-        look("com.peacocktv.peacockandroid", "Peacock", "番組", "SERIES", 0xFF7B61FF);
-        look("com.crunchyroll.crunchyroid", "Crunchyroll", "アニメ", "ANIME", 0xFFF47521);
-        look("com.spotify.tv.android", "Spotify", "音楽", "MÚSICA", 0xFF1DB954);
-        look("com.valvesoftware.steamlink", "Steam Link", "遊戯", "JUEGOS", 0xFF66C0F4);
-        look("com.android.vending", "Play Store", "店", "TIENDA", 0xFF01A971);
-        look("com.mediatek.wwtv.mediaplayer", "Media Player", "再生", "REPRODUCTOR", 0xFFFFB21E);
-        look("com.google.android.youtube.tvmusic", "YouTube Music", "音楽", "MÚSICA", 0xFFFF0033);
-        look("com.google.android.youtube.tvkids", "YouTube Kids", "家族", "FAMILIA", 0xFFFF2A3D);
-        look("com.mitv.dream", "Fondos Mi", "写真", "FONDOS", 0xFFFFC23D);
+        look("com.netflix.ninja", "Netflix", "netflix", Cat.FILM, 0xFFE50914);
+        look("com.amazon.amazonvideo.livingroom", "Prime Video", "prime_video", Cat.FILM, 0xFF00A8E1);
+        look("com.wbd.stream", "HBO Max", "hbo_max", Cat.SERIES, 0xFF2D55FF);
+        look("com.disney.disneyplus", "Disney+", "disney_plus", Cat.SERIES, 0xFF3B5BFF);
+        look("com.google.android.youtube.tv", "YouTube", "youtube", Cat.VIDEO, 0xFFFF2A3D);
+        look("com.hulu.livingroomplus", "Hulu", "hulu", Cat.SERIES, 0xFF1CE783);
+        look("com.peacocktv.peacockandroid", "Peacock", "peacock", Cat.SERIES, 0xFF7B61FF);
+        look("com.crunchyroll.crunchyroid", "Crunchyroll", "crunchyroll", Cat.ANIME, 0xFFF47521);
+        look("com.spotify.tv.android", "Spotify", "spotify", Cat.MUSIC, 0xFF1DB954);
+        look("com.valvesoftware.steamlink", "Steam Link", "steam_link", Cat.GAMES, 0xFF66C0F4);
+        look("com.android.vending", "Play Store", "play_store", Cat.STORE, 0xFF01A971);
+        look("com.mediatek.wwtv.mediaplayer", "Media Player", "media_player", Cat.PLAYER, 0xFFFFB21E);
+        look("com.google.android.youtube.tvmusic", "YouTube Music", "youtube_music", Cat.MUSIC, 0xFFFF0033);
+        look("com.google.android.youtube.tvkids", "YouTube Kids", "youtube_kids", Cat.FAMILY, 0xFFFF2A3D);
+        look("com.mitv.dream", null, "mi_wallpaper", Cat.WALLPAPER, 0xFFFFC23D);
+        look("com.cbs.ott", "Paramount+", "paramount_plus", Cat.FILM, 0xFF0064FF);
+        look("com.cbs.ca", "Paramount+", "paramount_plus", Cat.FILM, 0xFF0064FF);
+        look("com.apple.atve.androidtv.appletv", "Apple TV", "apple_tv", Cat.FILM, 0xFFE5E5EA);
+        look("com.apple.atve.sony.appletv", "Apple TV", "apple_tv", Cat.FILM, 0xFFE5E5EA);
+        look("com.plexapp.android", "Plex", "plex", Cat.PLAYER, 0xFFE5A00D);
+        look("com.tubitv", "Tubi", "tubi", Cat.FILM, 0xFF7408FF);
+        look("tv.pluto.android", "Pluto TV", "pluto_tv", Cat.LIVE, 0xFFFFF200);
+        look("tv.twitch.android.app", "Twitch", "twitch", Cat.VIDEO, 0xFF9146FF);
+        look("org.xbmc.kodi", "Kodi", "kodi", Cat.PLAYER, 0xFF17B2E7);
+        look("com.sling", "Sling", "sling", Cat.LIVE, 0xFF0B7AFF);
+        look("com.google.android.youtube.tvunplugged", "YouTube TV", "youtube_tv", Cat.LIVE, 0xFFFF0033);
+        look("com.amazon.music.tv", "Amazon Music", "amazon_music", Cat.MUSIC, 0xFF25D1DA);
+        look("com.discovery.discoveryplus.mobile", "discovery+", "discovery_plus", Cat.SERIES, 0xFF2175D9);
+        look("com.discovery.discoveryplus.androidtv", "discovery+", "discovery_plus", Cat.SERIES, 0xFF2175D9);
+        look("com.espn.score_center", "ESPN", "espn", Cat.SPORTS, 0xFFD00000);
+        look("org.jellyfin.androidtv", "Jellyfin", "jellyfin", Cat.PLAYER, 0xFFAA5CC3);
+        look("org.videolan.vlc", "VLC", "vlc", Cat.PLAYER, 0xFFFF8800);
     }
 
     /** The main panels on first run, in order. After that, what's pinned is saved and changed from the remote. */
@@ -123,81 +199,127 @@ final class Kido {
     };
 
     /**
-     * Installed but not shown: the manual, the updater and the input app (inputs have their own section).
-     * These are the ones on a Sharp AQUOS; other TVs have their own.
+     * Installed but not shown: manuals, firmware updaters, store demos, setup and factory tools, which come with
+     * the TV but aren't apps anyone opens day to day. Kept short on purpose: anything a person might want
+     * (players, casting, live TV, cleaners, help and support) stays visible.
      */
     static final String[] HIDDEN = {
+            // Sharp. The MediaTek TV center is the input app, and inputs have their own section.
             "jp.co.sharp.av.android.emanual",
+            "jp.co.sharp.av.android.epopdemo",
             "rcota.android.av.sharp.co.jp.rcota",
             "com.mediatek.wwtv.tvcenter",
+            // Google
+            "com.google.android.tungsten.setupwraith",
+            "com.google.android.tvtutorials",
+            // Store demo loop found on several brands
+            "fusion.android.tv.demo",
+            // TCL
+            "com.tcl.ocean.instructions",
+            "com.tcl.repairguide",
+            "com.tcl.exhibit",
+            "com.tcl.esticker",
+            "com.tcl.versionUpdateApp",
+            "com.tcl.UpdatePeripheral",
+            "com.tcl.useragreement",
+            // Hisense and Vu
+            "com.hisense.fte",
+            "com.vt.fte",
+            "com.hisense.storemode",
+            "com.vt.storemode",
+            "com.hisense.tv.ota",
+            "com.hisense.remoteupgrade",
+            "com.vt.tv.ota",
+            "com.vt.remoteupgrade",
+            // Sony
+            "com.sony.dtv.imanual",
+            "com.sony.dtv.demomode",
+            "com.sony.dtv.demosupport",
+            "com.sony.dtv.multiscreendemo",
+            // Xiaomi. The factory test app also answers Home, so it should never be one tap away.
+            "com.xiaomi.mitv.handbook",
+            "com.xiaomi.mitv.manualhelp",
+            "com.xiaomi.mitv.updateservice",
+            "com.xiaomi.mitv.upgrade",
+            "com.duokan.factorytest",
+            // Philips
+            "org.droidtv.demome",
+            "com.Smartdevice.emanual",
     };
 
-    static Look lookFor(String pkg, String label) {
-        Look l = LOOKS.get(pkg);
-        return l != null ? l : new Look(label, "アプリ", "APP", AMBER);
+    /**
+     * The look for an installed app. Apps in the catalog get their name, category and brand color from it.
+     * Any other app keeps its own label; its category comes from words in its name and package (then from
+     * the category the app declares), and its color from the most distinctive color in its own banner.
+     */
+    static Look lookFor(Context c, PackageManager pm, ResolveInfo ri, String pkg, String label) {
+        Known known = LOOKS.get(pkg);
+        int emblem = emblemFor(c, known != null ? known.slug : null, pkg);
+        if (known != null) {
+            return new Look(known.name != null ? known.name : label, known.cat.kanji,
+                    c.getString(known.cat.label), known.glow, emblem);
+        }
+        Cat cat = categorize(pkg, label, ri.activityInfo.applicationInfo);
+        int color = logoColor(pm, ri, pkg);
+        if (color == 0) color = cat.color != 0 ? cat.color : AMBER;
+        return new Look(label, cat.kanji, c.getString(cat.label), color, emblem);
     }
 
     /**
-     * An app the catalog doesn't know: its category comes from words in its name and package (then from
-     * the category the app declares), and its color from the most distinctive color in its own banner.
+     * A themed emblem bundled for the app, if there is one: a white-on-transparent drawable named
+     * emblem_<slug> for catalog apps (e.g. emblem_netflix), or emblem_<package, dots as underscores> for any
+     * app (e.g. emblem_com_example_app). It is tinted when drawn, so one image works in every theme.
      */
-    static Look lookFor(PackageManager pm, ResolveInfo ri, String pkg, String label) {
-        Look known = LOOKS.get(pkg);
-        if (known != null) return known;
-        String[] cat = categorize(pkg, label, ri.activityInfo.applicationInfo);
-        int color = logoColor(pm, ri, pkg);
-        if (color == 0) color = cat[2] != null ? (int) Long.parseLong(cat[2], 16) : AMBER;
-        return new Look(label, cat[0], cat[1], color);
+    static int emblemFor(Context c, String slug, String pkg) {
+        Resources res = c.getResources();
+        int id = slug != null ? res.getIdentifier("emblem_" + slug, "drawable", c.getPackageName()) : 0;
+        if (id == 0) id = res.getIdentifier("emblem_" + slugOf(pkg), "drawable", c.getPackageName());
+        return id;
     }
 
-    // {kanji, category, fallback color}. The kanji are the ones the Mincho subset in res/font carries.
-    private static final String[] CINE = {"映画", "CINE", "FFE50914"}, SERIES = {"番組", "SERIES", "FF2D55FF"},
-            FAMILIA = {"家族", "FAMILIA", "FF3B5BFF"}, VIDEO = {"動画", "VIDEO", "FFFF2A3D"},
-            ANIME = {"アニメ", "ANIME", "FFF47521"}, MUSICA = {"音楽", "MÚSICA", "FF1DB954"},
-            JUEGOS = {"遊戯", "JUEGOS", "FF66C0F4"}, TIENDA = {"店", "TIENDA", "FF01A971"},
-            REPRODUCTOR = {"再生", "REPRODUCTOR", "FFFFB21E"}, NOTICIAS = {"情報", "NOTICIAS", "FF4FA3FF"},
-            FOTOS = {"写真", "FOTOS", "FFFFC23D"}, PROYECCION = {"映写", "PROYECCIÓN", "FF3BD1C8"},
-            EN_VIVO = {"生放送", "TV EN VIVO", "FFFF5A36"}, HERRAMIENTAS = {"操作", "HERRAMIENTAS", "FF9AA7B0"},
-            NAVEGADOR = {"網", "NAVEGADOR", "FF4FA3FF"}, DEPORTES = {"放送", "DEPORTES", "FF3BD16F"},
-            APP = {"アプリ", "APP", null};
+    /** A package name as a resource name: lower case, with anything but letters and digits turned into "_". */
+    static String slugOf(String pkg) {
+        return pkg.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "_");
+    }
 
+    // Matched in order against an app's label and package; the first rule with a matching word wins.
     private static final Object[][] RULES = {
-            {MUSICA, "music", "música", "musica", "spotify", "deezer", "tidal", "radio", "soundcloud", "podcast", "audio"},
-            {ANIME, "crunchyroll", "anime"},
-            {FAMILIA, "kids", "niños", "ninos", "cartoon", "infantil"},
-            {JUEGOS, "game", "juego", "steam", "xbox", "playstation", "geforce", "arcade"},
-            {DEPORTES, "sport", "deporte", "espn", "dazn", "futbol", "fútbol"},
-            {NOTICIAS, "news", "noticias", "dw.com", "cnn", "bbc", "euronews"},
-            {EN_VIVO, "iptv", "xuper", "pluto", "en vivo", "livetv", "live tv", "mgstv"},
-            {PROYECCION, "miracast", "smartshare", "wfd", "milink", "screen mirror", "cast"},
-            {FOTOS, "gallery", "galería", "galeria", "photo", "foto", "wallpaper", "fondos", "carrusel"},
-            {NAVEGADOR, "browser", "navegador", "chrome", "firefox", "opera"},
-            {TIENDA, "store", "tienda", "vending", "aptoide"},
-            {REPRODUCTOR, "player", "reproductor", "vlc", "kodi", "plex", "mediaexplorer", "videoplayer"},
-            {HERRAMIENTAS, "manager", "settings", "ajustes", "files", "archivos", "cleaner", "update"},
-            {CINE, "movies", "películas", "peliculas", "cine", "film", "netflix", "prime video", "disney",
+            {Cat.MUSIC, "music", "música", "musica", "spotify", "deezer", "tidal", "radio", "soundcloud", "podcast", "audio"},
+            {Cat.ANIME, "crunchyroll", "anime"},
+            {Cat.FAMILY, "kids", "niños", "ninos", "cartoon", "infantil"},
+            {Cat.GAMES, "game", "juego", "steam", "xbox", "playstation", "geforce", "arcade"},
+            {Cat.SPORTS, "sport", "deporte", "espn", "dazn", "futbol", "fútbol"},
+            {Cat.NEWS, "news", "noticias", "dw.com", "cnn", "bbc", "euronews"},
+            {Cat.LIVE, "iptv", "xuper", "pluto", "en vivo", "livetv", "live tv", "mgstv"},
+            {Cat.CASTING, "miracast", "smartshare", "wfd", "milink", "screen mirror", "cast"},
+            {Cat.PHOTOS, "gallery", "galería", "galeria", "photo", "foto", "wallpaper", "fondos", "carrusel"},
+            {Cat.BROWSER, "browser", "navegador", "chrome", "firefox", "opera"},
+            {Cat.STORE, "store", "tienda", "vending", "aptoide"},
+            {Cat.PLAYER, "player", "reproductor", "vlc", "kodi", "plex", "mediaexplorer", "videoplayer"},
+            {Cat.TOOLS, "manager", "settings", "ajustes", "files", "archivos", "cleaner", "update"},
+            {Cat.FILM, "movies", "películas", "peliculas", "cine", "film", "netflix", "prime video", "disney",
                     "paramount", "vix", "mubi", "hbo", "apple tv", "videos"},
-            {SERIES, "series", "max", "star+"},
-            {VIDEO, "youtube", "video", "twitch", "vimeo"},
+            {Cat.SERIES, "series", "max", "star+"},
+            {Cat.VIDEO, "youtube", "video", "twitch", "vimeo"},
     };
 
-    private static String[] categorize(String pkg, String label, ApplicationInfo ai) {
-        String hay = (label + " " + pkg).toLowerCase(java.util.Locale.ROOT);
+    static Cat categorize(String pkg, String label, ApplicationInfo ai) {
+        String hay = (label + " " + pkg).toLowerCase(Locale.ROOT);
         for (Object[] rule : RULES) {
-            for (int i = 1; i < rule.length; i++) if (hay.contains((String) rule[i])) return (String[]) rule[0];
+            for (int i = 1; i < rule.length; i++) if (hay.contains((String) rule[i])) return (Cat) rule[0];
         }
         if (ai != null) {
             switch (ai.category) {
-                case ApplicationInfo.CATEGORY_AUDIO: return MUSICA;
-                case ApplicationInfo.CATEGORY_GAME: return JUEGOS;
-                case ApplicationInfo.CATEGORY_VIDEO: return VIDEO;
-                case ApplicationInfo.CATEGORY_IMAGE: return FOTOS;
-                case ApplicationInfo.CATEGORY_NEWS: return NOTICIAS;
-                case ApplicationInfo.CATEGORY_PRODUCTIVITY: return HERRAMIENTAS;
+                case ApplicationInfo.CATEGORY_AUDIO: return Cat.MUSIC;
+                case ApplicationInfo.CATEGORY_GAME: return Cat.GAMES;
+                case ApplicationInfo.CATEGORY_VIDEO: return Cat.VIDEO;
+                case ApplicationInfo.CATEGORY_IMAGE: return Cat.PHOTOS;
+                case ApplicationInfo.CATEGORY_NEWS: return Cat.NEWS;
+                case ApplicationInfo.CATEGORY_PRODUCTIVITY: return Cat.TOOLS;
                 default: break;
             }
         }
-        return APP;
+        return Cat.APP;
     }
 
     private static final Map<String, Integer> COLOR_CACHE = new HashMap<>();

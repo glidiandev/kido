@@ -8,8 +8,8 @@ import android.view.accessibility.AccessibilityEvent;
 /**
  * Lets the remote's Input button open KIDŌ's inputs panel from anywhere, as the stock launcher did.
  * It only looks at that one button: every other key goes on untouched, and it reads no screen content.
- * Trade-off on this TV: while any key filter is bound, Android stops repeating a held volume key, so
- * KIDŌ's settings menu can switch this helper off (BOTÓN INPUT).
+ * It is off until the user turns it on. Trade-off: while any key filter is bound, Android stops repeating
+ * a held volume key, so KIDŌ's settings menu can switch this helper off again (INPUT BUTTON).
  */
 public class InputKeyService extends AccessibilityService {
     /** The keys an Input or Source button sends: TV_INPUT on the Mi TV P1 remote, MEDIA_RECORD on some Xiaomi firmware. */

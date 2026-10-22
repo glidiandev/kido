@@ -11,6 +11,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
 import android.content.pm.ResolveInfo;
 import android.graphics.Canvas;
 import android.graphics.Paint;
@@ -41,6 +42,7 @@ import android.view.animation.AccelerateInterpolator;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.PathInterpolator;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -65,10 +67,11 @@ import java.util.function.Consumer;
  */
 public class KidoActivity extends Activity {
     private static final int[][] ZONES = {{0, 0}, {1900, 220}, {720, 1180}};
-    private static final String[][] ZONE_NAMES = {
-            {"主要", "SELECCIÓN PRINCIPAL", "INICIO"}, {"アプリ", "APLICACIONES", "APPS"}, {"制御系統", "CONTROL DEL SISTEMA", "SISTEMA"}};
+    // Each section has a big kanji beside its title and a short one on its tab; the words are in strings.xml.
+    private static final String[] ZONE_KANJI = {"主要", "アプリ", "制御系統"};
     private static final String[] TAB_KANJI = {"主要", "アプリ", "制御"};
-    private static final String[] PHASES = {"ENLACE", "AUTENT.", "BÚFER", "DECODIF.", "AUDIO", "VIDEO", "SINCRO", "LISTO"};
+    private static final int[] ZONE_TITLES = {R.string.zone_main, R.string.zone_apps, R.string.zone_system};
+    private static final int[] ZONE_TABS = {R.string.zone_main_tab, R.string.zone_apps_tab, R.string.zone_system_tab};
     private static final long IDLE_MS = 45_000;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -265,7 +268,7 @@ public class KidoActivity extends Activity {
             Intent i = pm.getLeanbackLaunchIntentForPackage(pkg);
             if (i == null) continue;
             String label = String.valueOf(ri.loadLabel(pm));
-            out.add(new App(pkg, Kido.lookFor(pm, ri, pkg, label), i));
+            out.add(new App(pkg, Kido.lookFor(this, pm, ri, pkg, label), i));
         }
         Collections.sort(out, (a, b) -> a.look.name.compareToIgnoreCase(b.look.name));
         return out;
@@ -295,11 +298,10 @@ public class KidoActivity extends Activity {
         zoneGlow[index] = g;
         place(z, new RulerView(this, ZONES[index][1] + 440), 36, 446, 64, 580);
 
-        String[] names = ZONE_NAMES[index];
         LinearLayout title = row();
-        title.addView(text(names[0], Kido.mincho, 46, Kido.AMBER, 0));
+        title.addView(text(ZONE_KANJI[index], Kido.mincho, 46, Kido.AMBER, 0));
         title.addView(gap(18));
-        title.addView(text(names[1], Kido.condBold, 30, Kido.INK, 0.14f));
+        title.addView(text(str(ZONE_TITLES[index]), Kido.condBold, 30, Kido.INK, 0.14f));
         title.addView(gap(14));
         title.addView(text("SEC-0" + (index + 1), Kido.mono, 22, Kido.DIM, 0));
         place(z, title, 120, 360, -1, -1);
@@ -307,7 +309,7 @@ public class KidoActivity extends Activity {
     }
 
     private void buildMain(FrameLayout z, List<App> favs) {
-        TextView tag = counter(0, "FAVORITOS // %02d CARGADOS", favs.size());
+        TextView tag = counter(0, str(R.string.favorites_count), favs.size());
         tag.setGravity(Gravity.END);
         place(z, tag, 1100, 376, 700, -1);
 
@@ -329,11 +331,11 @@ public class KidoActivity extends Activity {
         readPills = new PillsView(this, 20);
         read.addView(readPills, new LinearLayout.LayoutParams(Kido.px(300), Kido.px(26)));
         read.addView(gap(46));
-        read.addView(text("ACTUALIZ. ", Kido.mono, 25, Kido.DIM, 0));
+        read.addView(text(str(R.string.read_updated) + " ", Kido.mono, 25, Kido.DIM, 0));
         readUpdated = text("", Kido.mono, 25, Kido.INK, 0);
         read.addView(readUpdated);
         read.addView(gap(46));
-        read.addView(text("SEÑAL ", Kido.mono, 25, Kido.DIM, 0));
+        read.addView(text(str(R.string.read_link) + " ", Kido.mono, 25, Kido.DIM, 0));
         readLink = text("", Kido.mono, 25, Kido.GREEN, 0);
         read.addView(readLink);
         read.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1f));
@@ -342,9 +344,9 @@ public class KidoActivity extends Activity {
         read.addView(readName);
         place(z, read, 122, 880, 1676, 74);
 
-        place(z, text("▼ 制御 SISTEMA", Kido.condBold, 26, Kido.DIM, 0.14f), 122, 966, -1, -1);
-        place(z, hint(), 760, 970, 400, -1);
-        TextView right = text("アプリ APPS ▶", Kido.condBold, 26, Kido.DIM, 0.14f);
+        place(z, text("▼ 制御 " + str(R.string.zone_system_tab), Kido.condBold, 26, Kido.DIM, 0.14f), 122, 966, -1, -1);
+        place(z, hint(), 560, 970, 800, -1);
+        TextView right = text("アプリ " + str(R.string.zone_apps_tab) + " ▶", Kido.condBold, 26, Kido.DIM, 0.14f);
         right.setGravity(Gravity.END);
         place(z, right, 1300, 966, 500, -1);
     }
@@ -368,18 +370,35 @@ public class KidoActivity extends Activity {
         lp.topMargin = Kido.px(18);
         lp.rightMargin = Kido.px(24);
         c.addView(cat, lp);
+        // Long category names (REPRODUCTOR, HERRAMIENTAS) shrink a little so they never run into the channel code.
+        float room = Kido.px(316 - 24 - 24 - 12 - 8) - code.getPaint().measureText(code.getText().toString())
+                - kanji.getPaint().measureText(app.look.kanji);
+        fitLine(en, (int) room);
         TextView name = text(app.look.name.toUpperCase(Locale.ROOT), Kido.mincho, 50, Kido.CREAM, 0);
-        fitWords(name, Kido.px(268));
-        name.setGravity(Gravity.BOTTOM);
-        name.setMaxLines(2);
-        name.setLineSpacing(0, 0.92f);
-        place(c, name, 24, 110, 268, 180);
+        final ImageView emblem = app.look.emblem != 0 ? new ImageView(this) : null;
+        if (emblem != null) {
+            // A themed emblem fills the middle of the card in the app's color, with the name on one line under it.
+            emblem.setImageResource(app.look.emblem);
+            emblem.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            emblem.setImageTintList(ColorStateList.valueOf(app.look.glow));
+            place(c, emblem, 24, 66, 268, 136);
+            name.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, Kido.px(40));
+            name.setSingleLine(true);
+            fitLine(name, Kido.px(268));
+            place(c, name, 24, 214, 268, -1);
+        } else {
+            fitWords(name, Kido.px(268));
+            name.setGravity(Gravity.BOTTOM);
+            name.setMaxLines(2);
+            name.setLineSpacing(0, 0.92f);
+            place(c, name, 24, 110, 268, 180);
+        }
         GlowView stripe = new GlowView(this, Kido.px(14), false);
         stripe.setColor(app.look.glow);
         place(c, stripe, 10, 286, 296, 38);
-        TextView ready = text("LISTO", Kido.mono, 22, Kido.DIM, 0);
+        TextView ready = text(str(R.string.ready), Kido.mono, 22, Kido.DIM, 0);
         place(c, ready, 24, 326, -1, -1);
-        TextView ads = text("ANUNC. 0", Kido.mono, 22, Kido.DIM, 0);
+        TextView ads = text(str(R.string.ads), Kido.mono, 22, Kido.DIM, 0);
         ads.setGravity(Gravity.END);
         place(c, ads, 160, 326, 132, -1);
 
@@ -397,6 +416,7 @@ public class KidoActivity extends Activity {
             kanji.setTextColor(has ? t : Kido.INK);
             en.setTextColor(has ? t : Kido.INK);
             name.setTextColor(has ? t : Kido.CREAM);
+            if (emblem != null) emblem.setImageTintList(ColorStateList.valueOf(has ? t : app.look.glow));
             stripe.setColor(has ? 0xFF120800 : app.look.glow);
             stripe.setGlowing(!has);
             ready.setTextColor(has ? 0xFF1A0D00 : Kido.DIM);
@@ -408,7 +428,7 @@ public class KidoActivity extends Activity {
     }
 
     private void buildNetwork(FrameLayout z, List<App> rest) {
-        TextView tag = counter(1, "CANALES // %02d EN LÍNEA", rest.size());
+        TextView tag = counter(1, str(R.string.channels_count), rest.size());
         tag.setGravity(Gravity.END);
         place(z, tag, 1100, 376, 700, -1);
 
@@ -446,7 +466,7 @@ public class KidoActivity extends Activity {
         head.setGravity(Gravity.BOTTOM);
         head.addView(text("回線", Kido.mincho, 28, Kido.AMBER, 0));
         head.addView(gap(10));
-        head.addView(text("ESTADO DE ENLACE", Kido.condBold, 26, Kido.AMBER, 0.14f));
+        head.addView(text(str(R.string.link_status), Kido.condBold, 26, Kido.AMBER, 0.14f));
         place(panel, head, 26, 22, -1, -1);
         LinearLayout list = new LinearLayout(this);
         list.setOrientation(LinearLayout.VERTICAL);
@@ -482,8 +502,9 @@ public class KidoActivity extends Activity {
         place(panel, detailRate, 130, 452, 220, -1);
         place(z, panel, 1430, 452, 370, 500);
 
-        place(z, text("◀ 主要 INICIO", Kido.condBold, 26, Kido.DIM, 0.14f), 122, 966, -1, -1);
-        place(z, hint(), 760, 970, 400, -1);
+        place(z, text("◀ 主要 " + str(R.string.zone_main_tab), Kido.condBold, 26, Kido.DIM, 0.14f), 122, 966, -1, -1);
+        // Centered under the honeycomb rather than the screen, so it stays clear of the "more channels" note.
+        place(z, hint(), 365, 970, 800, -1);
     }
 
     private void buildSystem(FrameLayout z) {
@@ -515,15 +536,16 @@ public class KidoActivity extends Activity {
                 cecSeen.put(info.getId(), cecDeviceOn(tim, info.getId()));
                 String dev = deviceOn(tim, info.getId());
                 entries.add(new String[]{dev != null ? dev : label, num.isEmpty() ? String.valueOf(port) : num,
-                        dev != null ? label : "PUERTO " + port, linked ? "CONECTADO" : "LIBRE", info.getId()});
+                        dev != null ? label : str(R.string.port_n, port), str(linked ? R.string.linked : R.string.empty),
+                        info.getId()});
                 port++;
             }
         }
         inputCount = entries.size();
-        entries.add(new String[]{"WI-FI", "", "HOGAR", "RED", null});
-        entries.add(new String[]{"AJUSTES", "", "SISTEMA", "CONFIG.", null});
+        entries.add(new String[]{"WI-FI", "", str(R.string.wifi_home), str(R.string.wifi_network), null});
+        entries.add(new String[]{str(R.string.settings), "", str(R.string.settings_system), str(R.string.settings_config), null});
 
-        TextView tag = counter(2, "ENTRADAS EXTERNAS // %d PUERTOS", inputCount);
+        TextView tag = counter(2, str(R.string.inputs_count), inputCount);
         tag.setGravity(Gravity.END);
         place(z, tag, 1100, 376, 700, -1);
 
@@ -534,7 +556,7 @@ public class KidoActivity extends Activity {
             boolean isInput = i < inputCount;
             String jp = isInput ? "入力" : i == inputCount ? "無線" : "設定";
             String kanji = isInput ? "入力" : i == inputCount ? "通信" : "設定";
-            String en = isInput ? "ENTRADA" : i == inputCount ? "INALÁMBRICO" : "AJUSTES";
+            String en = str(isInput ? R.string.input : i == inputCount ? R.string.wireless : R.string.settings);
             FrameLayout box = new FrameLayout(this);
             box.setFocusable(true);
             box.setClickable(true);
@@ -577,8 +599,8 @@ public class KidoActivity extends Activity {
             box.setTag(new Item(2, null, -1, status));
             box.setOnClickListener(v -> {
                 if (inputId != null) openInput(inputId, e[0]);
-                else if (idx == inputCount) openSystem(Settings.ACTION_WIFI_SETTINGS, "無線", "ABRIENDO WI-FI");
-                else openSystem(Settings.ACTION_SETTINGS, "設定", "ABRIENDO AJUSTES");
+                else if (idx == inputCount) openSystem(Settings.ACTION_WIFI_SETTINGS, "無線", str(R.string.opening_wifi));
+                else openSystem(Settings.ACTION_SETTINGS, "設定", str(R.string.opening_settings));
             });
             box.setOnFocusChangeListener((v, has) -> {
                 bg.setColor(has ? Kido.GREEN : Kido.PANEL);
@@ -602,10 +624,10 @@ public class KidoActivity extends Activity {
         strip.setGravity(Gravity.CENTER_VERTICAL);
         strip.setBackground(box(Kido.PANEL, Kido.LINE, 2));
         strip.setPadding(Kido.px(28), 0, Kido.px(28), 0);
-        toast = text("待機中   EN ESPERA. ELIGE UNA FUENTE O UN AJUSTE.   MANTÉN OK EN AJUSTES PARA SONIDO Y TEMA.", Kido.mono, 25, Kido.INK, 0);
+        toast = text("待機中   " + str(R.string.system_hint), Kido.mono, 25, Kido.INK, 0);
         strip.addView(toast);
         place(z, strip, 122, 830, 1676, 74);
-        place(z, text("▲ 主要 INICIO", Kido.condBold, 26, Kido.DIM, 0.14f), 122, 940, -1, -1);
+        place(z, text("▲ 主要 " + str(R.string.zone_main_tab), Kido.condBold, 26, Kido.DIM, 0.14f), 122, 940, -1, -1);
     }
 
     /** Explicit moves at section edges, so the remote always lands where the arrows on screen point. */
@@ -684,13 +706,13 @@ public class KidoActivity extends Activity {
         jp.setPadding(Kido.px(10), Kido.px(2), Kido.px(10), Kido.px(4));
         lab.addView(jp);
         lab.addView(gap(16));
-        lab.addView(text("HORA LOCAL:", Kido.condBold, 26, Kido.INK, 0.12f));
+        lab.addView(text(str(R.string.local_time), Kido.condBold, 26, Kido.INK, 0.12f));
         place(hud, lab, 100, 54, -1, -1);
         place(hud, new SegClockView(this), 86, 98, 680, 164);
         dateText = text(dateLine(), Kido.mono, 26, Kido.DIM, 0.06f);
         place(hud, dateText, 100, 268, -1, -1);
 
-        TextView dataLabels = text("VERIF.\nMEM LIBRE\nACTIVO\nENTRADAS", Kido.mono, 17, Kido.DIM, 0.06f);
+        TextView dataLabels = text(str(R.string.data_labels), Kido.mono, 17, Kido.DIM, 0.06f);
         dataLabels.setLineSpacing(Kido.px(6), 1f);
         place(hud, dataLabels, 800, 76, -1, -1);
         dataValues = text("", Kido.mono, 17, Kido.INK, 0.06f);
@@ -702,7 +724,7 @@ public class KidoActivity extends Activity {
             tabBg[i] = box(Kido.withAlpha(Kido.GREEN, 0.1f), Kido.withAlpha(Kido.GREEN, 0.45f), 2);
             tab.setBackground(tabBg[i]);
             tabText[i * 2] = text(TAB_KANJI[i], Kido.mincho, 22, Kido.withAlpha(Kido.LIME, 0.75f), 0);
-            tabText[i * 2 + 1] = text(ZONE_NAMES[i][2], Kido.condBold, 22, Kido.withAlpha(Kido.LIME, 0.85f), 0.12f);
+            tabText[i * 2 + 1] = text(str(ZONE_TABS[i]), Kido.condBold, 22, Kido.withAlpha(Kido.LIME, 0.85f), 0.12f);
             place(tab, tabText[i * 2], 12, 6, -1, -1);
             place(tab, tabText[i * 2 + 1], 12, 38, -1, -1);
             place(hud, tab, 730 + i * 146, 214, 136, 74);
@@ -717,7 +739,7 @@ public class KidoActivity extends Activity {
         plate.setBackground(plateBg);
         plateKanji = text("映画", Kido.mincho, 104, 0xFF0A0505, 0);
         place(plate, plateKanji, 26, 6, 470, -1);
-        plateEn = text("CINE", Kido.condBold, 38, 0xFF0A0505, 0.1f);
+        plateEn = text(str(R.string.cat_film), Kido.condBold, 38, 0xFF0A0505, 0.1f);
         place(plate, plateEn, 30, 136, 470, -1);
         place(plate, new Stripes(this, 0x8C000000), 490, 0, 150, 196);
         plateHalo = new GlowView(this, Kido.px(60), false);
@@ -731,7 +753,7 @@ public class KidoActivity extends Activity {
         subLeft = text("", Kido.condBold, 30, Kido.CREAM, 0.1f);
         subLeft.setSingleLine(true);
         place(sub, subLeft, 22, 12, 470, -1);
-        subRight = text("LISTO", Kido.mono, 22, Kido.DIM, 0);
+        subRight = text(str(R.string.ready), Kido.mono, 22, Kido.DIM, 0);
         subRight.setGravity(Gravity.END);
         place(sub, subRight, 460, 18, 158, -1);
         place(hud, sub, 1180, 262, 640, 64);
@@ -747,7 +769,7 @@ public class KidoActivity extends Activity {
         ticker = text("", Kido.mono, 18, Kido.DIM, 0.06f);
         ticker.setSingleLine(true);
         place(hud, ticker, 430, 1050, 860, -1);
-        footerZone = text("SEC-01 // INICIO", Kido.mono, 20, Kido.DIM, 0.08f);
+        footerZone = text("SEC-01 // " + str(ZONE_TABS[0]), Kido.mono, 20, Kido.DIM, 0.08f);
         footerZone.setGravity(Gravity.END);
         place(hud, footerZone, 1300, 1050, 520, -1);
         showTabs(0);
@@ -804,15 +826,15 @@ public class KidoActivity extends Activity {
 
     private void showStatus(View v) {
         Item item = (Item) v.getTag();
-        if (item.app != null) log("FOCO CH." + item.app.ch + " " + item.app.look.name.toUpperCase(Locale.ROOT));
-        else if (item.status != null) log("FOCO " + item.status[2]);
+        if (item.app != null) log(str(R.string.log_focus, "CH." + item.app.ch + " " + item.app.look.name.toUpperCase(Locale.ROOT)));
+        else if (item.status != null) log(str(R.string.log_focus, item.status[2]));
         if (item.app != null) {
             App a = item.app;
-            setStatus(a.look.kanji, a.look.category, a.look.name.toUpperCase(Locale.ROOT) + " // CH." + a.ch, "LISTO", a.look.glow);
+            setStatus(a.look.kanji, a.look.category, a.look.name.toUpperCase(Locale.ROOT) + " // CH." + a.ch, str(R.string.ready), a.look.glow);
             if (item.zone == 0) {
                 readCh.setText(a.ch);
                 readUpdated.setText(updatedOn(a.pkg));
-                readName.setText("ABRIR " + a.look.name.toUpperCase(Locale.ROOT));
+                readName.setText(str(R.string.launch_name, a.look.name.toUpperCase(Locale.ROOT)));
             } else {
                 scrollLinkList(a);
                 for (TextView r : linkRows) {
@@ -820,7 +842,7 @@ public class KidoActivity extends Activity {
                     r.setTextColor(on ? Kido.INK : Kido.DIM);
                     r.setText((on ? "▶ " : "  ") + "CH." + ((App) r.getTag()).ch + " " + ((App) r.getTag()).look.name.toUpperCase(Locale.ROOT));
                 }
-                detailHead.setText("CH." + a.ch + " // ENLACE OK");
+                detailHead.setText(str(R.string.link_ok, a.ch));
             }
         } else if (item.status != null) {
             int color = item.status[0].equals("入力") ? 0xFFB46CFF : item.status[0].equals("通信") ? Kido.GREEN : Kido.AMBER;
@@ -886,7 +908,7 @@ public class KidoActivity extends Activity {
         }
         if (hiveMore != null) {
             boolean above = top > 0, below = top + 1 < lastRow;
-            hiveMore.setText(above || below ? (above ? "▲ " : "") + (below ? "▼ " : "") + "MÁS CANALES" : "");
+            hiveMore.setText(above || below ? (above ? "▲ " : "") + (below ? "▼ " : "") + str(R.string.more_channels) : "");
         }
         return moved;
     }
@@ -916,8 +938,8 @@ public class KidoActivity extends Activity {
         board.animate().translationX(-Kido.px(ZONES[z][0])).translationY(-Kido.px(ZONES[z][1]))
                 .setDuration(620).setInterpolator(fluid).start();
         showTabs(z);
-        footerZone.setText("SEC-0" + (z + 1) + " // " + ZONE_NAMES[z][2]);
-        log("SECTOR 0" + (z + 1) + " " + ZONE_NAMES[z][1]);
+        footerZone.setText("SEC-0" + (z + 1) + " // " + str(ZONE_TABS[z]));
+        log(str(R.string.log_sector, z + 1, str(ZONE_TITLES[z])));
         // Draw the section in as the pan settles; a newer move cancels it.
         handler.removeCallbacks(arrive);
         handler.postDelayed(arrive, 420);
@@ -1028,7 +1050,7 @@ public class KidoActivity extends Activity {
         TextView circuit = text("第" + app.ch + "回線", Kido.mincho, 64, 0xFFFFFFFF, 0);
         circuit.setTextScaleX(0.8f);
         side.addView(circuit);
-        side.addView(text("INICIANDO // " + app.look.category, Kido.condBold, 30, glowColor, 0.16f));
+        side.addView(text(str(R.string.launch_sequence, app.look.category), Kido.condBold, 30, glowColor, 0.16f));
         top.addView(side);
         left.addView(top);
         TextView name = text(app.look.name.toUpperCase(Locale.ROOT), Kido.mincho, 130, 0xFFFFFFFF, 0);
@@ -1042,7 +1064,8 @@ public class KidoActivity extends Activity {
         ladder.setOrientation(LinearLayout.VERTICAL);
         List<View> slots = new ArrayList<>();
         List<TextView> states = new ArrayList<>();
-        for (String p : PHASES) {
+        String[] phases = getResources().getStringArray(R.array.launch_phases);
+        for (String p : phases) {
             LinearLayout r = row();
             r.setGravity(Gravity.CENTER_VERTICAL);
             r.addView(text(p, Kido.condBold, 22, glowColor, 0.12f), new LinearLayout.LayoutParams(Kido.px(130), -2));
@@ -1052,7 +1075,7 @@ public class KidoActivity extends Activity {
             sd.setColor(0xFF3A0006);
             slot.setBackground(sd);
             r.addView(slot, new LinearLayout.LayoutParams(0, Kido.px(22), 1f));
-            TextView st = text(" ESPERA", Kido.mono, 20, Kido.withAlpha(glowColor, 0.4f), 0);
+            TextView st = text(str(R.string.phase_wait), Kido.mono, 20, Kido.withAlpha(glowColor, 0.4f), 0);
             r.addView(st, new LinearLayout.LayoutParams(Kido.px(80), -2));
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
             lp.bottomMargin = Kido.px(9);
@@ -1071,9 +1094,9 @@ public class KidoActivity extends Activity {
         launch.setAlpha(0f);
         launch.animate().alpha(1f).setDuration(150).start();
         beeps.launch();
-        log("ABRIR CH." + app.ch + " " + app.look.name.toUpperCase(Locale.ROOT));
+        log(str(R.string.log_launch, app.ch, app.look.name.toUpperCase(Locale.ROOT)));
 
-        for (int i = 0; i < PHASES.length; i++) {
+        for (int i = 0; i < phases.length; i++) {
             final int k = i;
             handler.postDelayed(() -> {
                 ((GradientDrawable) slots.get(k).getBackground()).setColor(Kido.GREEN);
@@ -1081,11 +1104,11 @@ public class KidoActivity extends Activity {
                 states.get(k).setTextColor(Kido.GREEN);
             }, 90L + i * 70L);
         }
-        handler.postDelayed(() -> open(app.launch), 90L + PHASES.length * 70L + 120L);
+        handler.postDelayed(() -> open(app.launch), 90L + phases.length * 70L + 120L);
     }
 
     private void openInput(String inputId, String label) {
-        flashToast("切替", "CAMBIANDO A " + label + " ...");
+        flashToast("切替", str(R.string.switching_to, label) + " ...");
         Uri uri = TvContract.buildChannelUriForPassthroughInput(inputId);
         open(new Intent(Intent.ACTION_VIEW).setDataAndType(uri, "vnd.android.cursor.item/channel"));
     }
@@ -1105,7 +1128,7 @@ public class KidoActivity extends Activity {
             startActivity(i);
         } catch (ActivityNotFoundException e) {
             launch.setVisibility(View.GONE);
-            Toast.makeText(this, "No se puede abrir aquí", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.cant_open, Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -1113,8 +1136,8 @@ public class KidoActivity extends Activity {
 
     private final Runnable goIdle = () -> {
         idle = true;
-        setStatus("待機", "EN ESPERA", "EN ESPERA // SIN ACTIVIDAD", "INACTIVO", Kido.AMBER);
-        log("EN ESPERA // SIN ACTIVIDAD");
+        setStatus("待機", str(R.string.standby), str(R.string.standby_detail), str(R.string.idle), Kido.AMBER);
+        log(str(R.string.standby_detail));
     };
 
     @Override
@@ -1163,7 +1186,7 @@ public class KidoActivity extends Activity {
                 return true;
             }
         }
-        if (launch.getVisibility() == View.VISIBLE) return true;
+        if (launch.getVisibility() == View.VISIBLE) return true;    // ignore keys during the launch sequence
         if (isArrow(event.getKeyCode())) {
             if (up) {
                 holding = false;
@@ -1177,7 +1200,7 @@ public class KidoActivity extends Activity {
                 holding = false;
                 lastMoveAt = SystemClock.uptimeMillis();
             }
-        }    // ignore keys during the launch sequence
+        }
         return super.dispatchKeyEvent(event);
     }
 
@@ -1281,8 +1304,9 @@ public class KidoActivity extends Activity {
     private final List<TextView> hints = new ArrayList<>();
 
     private TextView hint() {
-        TextView t = text("MANTÉN OK // OPCIONES", Kido.mono, 20, Kido.DIM, 0.08f);
+        TextView t = text(str(R.string.hold_ok_options), Kido.mono, 20, Kido.DIM, 0.08f);
         hints.add(t);
+        t.setSingleLine(true);
         t.setGravity(Gravity.CENTER_HORIZONTAL);
         return t;
     }
@@ -1292,28 +1316,29 @@ public class KidoActivity extends Activity {
         List<String> pins = shownPins();
         int at = pins.indexOf(app.pkg);
         List<String[]> rows = new ArrayList<>();
-        if (pinned ? pins.size() > 1 : hexViews.size() > 1) rows.add(new String[]{"移動", "MOVER", "move"});
+        if (pinned ? pins.size() > 1 : hexViews.size() > 1) rows.add(new String[]{"移動", str(R.string.menu_move), "move"});
         if (pinned) {
-            rows.add(new String[]{"解除", "QUITAR DE INICIO", "unpin"});
+            rows.add(new String[]{"解除", str(R.string.menu_unpin), "unpin"});
         } else if (pins.size() < 5) {
-            rows.add(new String[]{"固定", "FIJAR EN INICIO", "pin"});
+            rows.add(new String[]{"固定", str(R.string.menu_pin), "pin"});
         } else {
             App last = ((Item) favViews.get(favViews.size() - 1).getTag()).app;
-            rows.add(new String[]{"固定", "FIJAR // REEMPLAZA A " + last.look.name.toUpperCase(Locale.ROOT), "pin"});
+            rows.add(new String[]{"固定", str(R.string.menu_pin_replaces, last.look.name.toUpperCase(Locale.ROOT)), "pin"});
         }
-        rows.add(new String[]{"情報", "INFORMACIÓN DE LA APP", "info"});
+        rows.add(new String[]{"情報", str(R.string.menu_info), "info"});
         showMenu(origin, "CH." + app.ch + " // " + app.look.name.toUpperCase(Locale.ROOT), rows,
                 action -> menuAction(action, app, at));
-        log("OPCIONES CH." + app.ch + " " + app.look.name.toUpperCase(Locale.ROOT));
+        log(str(R.string.log_options, app.ch, app.look.name.toUpperCase(Locale.ROOT)));
     }
 
     /** Hold OK on Settings: sound on or off, and the color theme. */
     private void settingsMenu(View origin) {
         List<String[]> rows = new ArrayList<>();
-        rows.add(new String[]{"音響", beeps.isOn() ? "SONIDO ACTIVADO // DESACTIVAR" : "SONIDO DESACTIVADO // ACTIVAR", "sound"});
-        rows.add(new String[]{"入力", inputKeyOn() ? "BOTÓN INPUT: SÍ // APAGAR" : "BOTÓN INPUT: NO // ENCENDER", "inputkey"});
-        for (int i = 0; i < Kido.THEMES.length; i++) {
-            rows.add(new String[]{Kido.THEMES[i][0], "TEMA // " + Kido.THEMES[i][1] + (i == Kido.theme ? "  ◀" : ""), "theme" + i});
+        rows.add(new String[]{"音響", str(beeps.isOn() ? R.string.menu_sound_on : R.string.menu_sound_off), "sound"});
+        rows.add(new String[]{"入力", str(inputKeyOn() ? R.string.menu_input_on : R.string.menu_input_off), "inputkey"});
+        String[] themes = getResources().getStringArray(R.array.theme_names);
+        for (int i = 0; i < Kido.THEME_KANJI.length; i++) {
+            rows.add(new String[]{Kido.THEME_KANJI[i], str(R.string.menu_theme, themes[i]) + (i == Kido.theme ? "  ◀" : ""), "theme" + i});
         }
         showMenu(origin, "KIDŌ v" + versionName() + " // GLIDIAN.DEV", rows, action -> {
             if (action.equals("sound")) {
@@ -1329,7 +1354,7 @@ public class KidoActivity extends Activity {
             int t = Integer.parseInt(action.substring(5));
             prefs.edit().putInt("theme", t).apply();
             Kido.applyTheme(t);
-            log("TEMA " + Kido.THEMES[t][1]);
+            log(str(R.string.log_theme, themes[t]));
             build();
             if (!sysViews.isEmpty()) sysViews.get(sysViews.size() - 1).requestFocus();
         });
@@ -1348,7 +1373,7 @@ public class KidoActivity extends Activity {
         head.setGravity(Gravity.BOTTOM);
         head.addView(text("操作", Kido.mincho, 58, Kido.AMBER, 0));
         head.addView(gap(16));
-        head.addView(text("OPCIONES", Kido.condBold, 34, Kido.INK, 0.16f));
+        head.addView(text(str(R.string.options), Kido.condBold, 34, Kido.INK, 0.16f));
         panel.addView(head);
         TextView sub = text(subtitle, Kido.mono, 24, Kido.DIM, 0.06f);
         sub.setPadding(0, Kido.px(6), 0, Kido.px(18));
@@ -1429,8 +1454,8 @@ public class KidoActivity extends Activity {
                 return;
         }
         savePins(pins);
-        log((action.equals("unpin") ? "QUITADO " : action.equals("pin") ? "FIJADO " : "MOVIDO ")
-                + app.look.name.toUpperCase(Locale.ROOT));
+        log(str(action.equals("unpin") ? R.string.log_unpinned : action.equals("pin") ? R.string.log_pinned : R.string.log_moved,
+                app.look.name.toUpperCase(Locale.ROOT)));
         rebuild(app.pkg);
     }
 
@@ -1450,7 +1475,7 @@ public class KidoActivity extends Activity {
             board.setTranslationX(-Kido.px(ZONES[zone][0]));
             board.setTranslationY(-Kido.px(ZONES[zone][1]));
             showTabs(zone);
-            footerZone.setText("SEC-0" + (zone + 1) + " // " + ZONE_NAMES[zone][2]);
+            footerZone.setText("SEC-0" + (zone + 1) + " // " + str(ZONE_TABS[zone]));
         }
         if (it.zone == 1) scrollHive(it.row, false);
         target.requestFocus();
@@ -1472,10 +1497,11 @@ public class KidoActivity extends Activity {
         swapAt = -1;
         glowBehind(v);
         pulse(zoneGlow[((Item) v.getTag()).zone]);
-        for (TextView h : hints) h.setText("◀▶▲▼ UBICAR // OK SOLTAR // ATRÁS CANCELAR");
-        setStatus("移動", "MOVIENDO", app.look.name.toUpperCase(Locale.ROOT) + " // ELIGE EL LUGAR", "OK SOLTAR", Kido.WARN);
+        for (TextView h : hints) h.setText(str(R.string.move_hint));
+        setStatus("移動", str(R.string.moving), str(R.string.move_pick, app.look.name.toUpperCase(Locale.ROOT)),
+                str(R.string.move_drop), Kido.WARN);
         beeps.section();
-        log("MOVER " + app.look.name.toUpperCase(Locale.ROOT));
+        log(str(R.string.log_move, app.look.name.toUpperCase(Locale.ROOT)));
     }
 
     /** One step of a move: the tile takes the next place and the others slide over to make room. */
@@ -1566,8 +1592,8 @@ public class KidoActivity extends Activity {
         hiveMoved = false;
         glowBehind(target);
         pulse(g);
-        setStatus("移動", "CAMBIAR", app.look.name.toUpperCase(Locale.ROOT) + " // POR " + out.look.name.toUpperCase(Locale.ROOT),
-                "OK CAMBIAR", Kido.WARN);
+        setStatus("移動", str(R.string.swap), str(R.string.swap_for, app.look.name.toUpperCase(Locale.ROOT),
+                out.look.name.toUpperCase(Locale.ROOT)), str(R.string.swap_ok), Kido.WARN);
         beeps.tick();
     }
 
@@ -1580,7 +1606,8 @@ public class KidoActivity extends Activity {
             moveTo(1);
             glowBehind(moving);
             pulse(zoneGlow[1]);
-            setStatus("移動", "MOVIENDO", app.look.name.toUpperCase(Locale.ROOT) + " // ELIGE EL LUGAR", "OK SOLTAR", Kido.WARN);
+            setStatus("移動", str(R.string.moving), str(R.string.move_pick, app.look.name.toUpperCase(Locale.ROOT)),
+                    str(R.string.move_drop), Kido.WARN);
             return;
         }
         int next = swapAt + (key == KeyEvent.KEYCODE_DPAD_LEFT ? -1 : key == KeyEvent.KEYCODE_DPAD_RIGHT ? 1 : 0);
@@ -1606,7 +1633,7 @@ public class KidoActivity extends Activity {
         movePulse = null;
         moving = null;
         swapAt = -1;
-        log("CAMBIO " + in.look.name.toUpperCase(Locale.ROOT) + " // " + out.look.name.toUpperCase(Locale.ROOT));
+        log(str(R.string.log_swap, in.look.name.toUpperCase(Locale.ROOT), out.look.name.toUpperCase(Locale.ROOT)));
         rebuild(in.pkg);
     }
 
@@ -1639,7 +1666,7 @@ public class KidoActivity extends Activity {
         if (movePulse != null) movePulse.cancel();
         movePulse = null;
         moving = null;
-        log((keep ? "MOVIDO " : "SIN CAMBIOS ") + it.app.look.name.toUpperCase(Locale.ROOT));
+        log(str(keep ? R.string.log_moved : R.string.log_unchanged, it.app.look.name.toUpperCase(Locale.ROOT)));
         rebuild(it.app.pkg);
     }
 
@@ -1674,16 +1701,17 @@ public class KidoActivity extends Activity {
         @Override
         public void run() {
             int linked = 0;
-            for (TextView t : inputMeta.values()) if ("CONECTADO".contentEquals(t.getText())) linked++;
+            String on = str(R.string.linked);
+            for (TextView t : inputMeta.values()) if (on.contentEquals(t.getText())) linked++;
             long up = SystemClock.elapsedRealtime() / 1000;
             updateWifi();
             String date = dateLine();
             if (!date.contentEquals(dateText.getText())) dateText.setText(date);
-            dataValues.setText(String.format(Locale.ROOT, "%04d  OK\n%d MB\n%02d:%02d:%02d\n%d // %d CONECT.",
-                    sysCheck, freeMb(), up / 3600, up / 60 % 60, up % 60, inputCount, linked));
+            dataValues.setText(String.format(Locale.ROOT, "%04d  OK\n%d MB\n%02d:%02d:%02d\n%d // %d ",
+                    sysCheck, freeMb(), up / 3600, up / 60 % 60, up % 60, inputCount, linked) + str(R.string.linked_short));
             renderTicker();
             if (SystemClock.uptimeMillis() - lastLogAt > 6000) {
-                log(String.format(Locale.ROOT, "VERIF. %04d // PARIDAD %04X // OK", ++sysCheck, new Random().nextInt(0x10000)));
+                log(str(R.string.sys_check_log, ++sysCheck, new Random().nextInt(0x10000)));
             }
             handler.postDelayed(this, 1000);
         }
@@ -1725,15 +1753,16 @@ public class KidoActivity extends Activity {
         if (info != null && info.getRssi() > -127) {
             wifiLevel = WifiManager.calculateSignalLevel(info.getRssi(), 21) / 20f;
             wifiRate = info.getLinkSpeed() + " MBPS // " + info.getRssi() + " DBM";
-            quality = wifiLevel > 0.7f ? "FUERTE" : wifiLevel > 0.45f ? "BUENA" : wifiLevel > 0.25f ? "REGULAR" : "DÉBIL";
+            quality = str(wifiLevel > 0.7f ? R.string.wifi_strong : wifiLevel > 0.45f ? R.string.wifi_good
+                    : wifiLevel > 0.25f ? R.string.wifi_fair : R.string.wifi_weak);
         } else if (caps != null) {
             wifiLevel = 1f;
-            wifiRate = "CABLE // OK";
-            quality = "CABLE";
+            wifiRate = str(R.string.wired_ok);
+            quality = str(R.string.wired);
         } else {
             wifiLevel = 0f;
-            wifiRate = "SIN ENLACE";
-            quality = "SIN RED";
+            wifiRate = str(R.string.no_link);
+            quality = str(R.string.offline);
         }
         readLink.setText(quality);
         readLink.setTextColor(wifiLevel > 0.45f ? Kido.GREEN : wifiLevel > 0.25f ? Kido.AMBER : Kido.WARN);
@@ -1748,7 +1777,7 @@ public class KidoActivity extends Activity {
             long t = getPackageManager().getPackageInfo(pkg, 0).lastUpdateTime;
             boolean thisYear = new SimpleDateFormat("yyyy", Locale.US).format(new Date(t))
                     .equals(new SimpleDateFormat("yyyy", Locale.US).format(new Date()));
-            return new SimpleDateFormat(thisYear ? "dd MMM" : "dd MMM yy", new Locale("es")).format(new Date(t)).replace(".", "").toUpperCase(Locale.ROOT);
+            return dateText(thisYear ? "dd MMM" : "dd MMM yy", t);
         } catch (PackageManager.NameNotFoundException e) {
             return "--";
         }
@@ -1784,11 +1813,10 @@ public class KidoActivity extends Activity {
             if (on) items.add(INPUT_SERVICE);
             Settings.Secure.putString(cr, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, TextUtils.join(":", items));
             Settings.Secure.putInt(cr, Settings.Secure.ACCESSIBILITY_ENABLED, items.isEmpty() ? 0 : 1);
-            flashToast("入力", on ? "BOTÓN INPUT ENCENDIDO. EL VOLUMEN SUBE UN PASO POR PULSACIÓN."
-                    : "BOTÓN INPUT APAGADO. EL VOLUMEN VUELVE A SUBIR SEGUIDO.");
-            log("BOTÓN INPUT " + (on ? "SÍ" : "NO"));
+            flashToast("入力", str(on ? R.string.input_on_toast : R.string.input_off_toast));
+            log(str(on ? R.string.log_input_on : R.string.log_input_off));
         } catch (SecurityException e) {
-            flashToast("入力", "FALTA EL PERMISO: pm grant dev.glidian.kido android.permission.WRITE_SECURE_SETTINGS");
+            flashToast("入力", str(R.string.input_no_permission));
         }
     }
 
@@ -1797,8 +1825,8 @@ public class KidoActivity extends Activity {
         beeps.setOn(on);
         prefs.edit().putBoolean("sound", on).apply();
         beeps.tick();
-        flashToast("音響", on ? "SONIDO ACTIVADO. MANTÉN OK EN AJUSTES PARA SILENCIAR." : "SONIDO DESACTIVADO. MANTÉN OK EN AJUSTES PARA VOLVER A ACTIVARLO.");
-        log("SONIDO " + (on ? "ACTIVADO" : "DESACTIVADO"));
+        flashToast("音響", str(on ? R.string.sound_on_toast : R.string.sound_off_toast));
+        log(str(on ? R.string.log_sound_on : R.string.log_sound_off));
     }
 
     // ---------------------------------------------------------------- input alert
@@ -1865,13 +1893,13 @@ public class KidoActivity extends Activity {
                 e.getValue().setText(shown);
                 fitLine(e.getValue(), inputNameWidth > 0 ? inputNameWidth : Kido.px(146));
             }
-            String left = dev != null ? port : "PUERTO " + inputPortNo.get(id);
+            String left = dev != null ? port : str(R.string.port_n, inputPortNo.get(id));
             TextView ml = inputPortViews.get(id);
             if (ml != null) ml.setText(left);
             String cec = cecDeviceOn(tim, id);
             cecSeen.put(id, cec);
             boolean linked = tim.getInputState(id) == TvInputManager.INPUT_STATE_CONNECTED || cec != null;
-            String state = linked ? "CONECTADO" : "LIBRE";
+            String state = str(linked ? R.string.linked : R.string.empty);
             TextView meta = inputMeta.get(id);
             if (meta != null && !state.contentEquals(meta.getText())) meta.setText(state);
             String[] st = inputStatus.get(id);
@@ -1882,7 +1910,7 @@ public class KidoActivity extends Activity {
             inputLabels.put(id, shown);
         }
         if (alertInput != null && alert != null && alert.getVisibility() == View.VISIBLE) {
-            alertDetail.setText(inputLabels.get(alertInput) + " // SEÑAL DETECTADA");
+            alertDetail.setText(str(R.string.signal_locked, inputLabels.get(alertInput)));
         }
     }
 
@@ -1930,11 +1958,11 @@ public class KidoActivity extends Activity {
         k.setTextScaleX(0.8f);
         k.setShadowLayer(Kido.px(24), 0, 0, Kido.withAlpha(Kido.WARN, 0.8f));
         place(pulse, k, 40, 74, -1, -1);
-        place(pulse, text("ENTRADA DETECTADA", Kido.condBold, 52, Kido.WARN, 0.14f), 470, 62, -1, -1);
+        place(pulse, text(str(R.string.input_detected), Kido.condBold, 52, Kido.WARN, 0.14f), 470, 62, -1, -1);
         alert.addView(pulse, match());
         alertDetail = text("", Kido.mono, 28, Kido.CREAM, 0.04f);
         place(alert, alertDetail, 474, 134, 740, -1);
-        place(alert, text("OK  CAMBIAR AHORA      ATRÁS  DESCARTAR", Kido.mono, 22, Kido.DIM, 0.06f), 474, 192, -1, -1);
+        place(alert, text(str(R.string.alert_keys), Kido.mono, 22, Kido.DIM, 0.06f), 474, 192, -1, -1);
         place(root, alert, 340, 400, 1240, 280);
         unclip(k);
         // A slow pulse, well under three flashes a second.
@@ -1948,7 +1976,7 @@ public class KidoActivity extends Activity {
     private void showAlert(String inputId) {
         alertInput = inputId;
         String label = inputLabels.get(inputId);
-        alertDetail.setText(label + " // SEÑAL DETECTADA");
+        alertDetail.setText(str(R.string.signal_locked, label));
         alert.animate().cancel();
         alert.setVisibility(View.VISIBLE);
         alert.setAlpha(0f);
@@ -1956,7 +1984,7 @@ public class KidoActivity extends Activity {
         alert.animate().alpha(1f).translationY(0).setDuration(300).setInterpolator(new DecelerateInterpolator(2f)).start();
         alertPulse.start();
         beeps.alert();
-        log("ALERTA // ENTRADA DETECTADA " + label);
+        log(str(R.string.log_alert, label));
         handler.removeCallbacks(hideAlert);
         handler.postDelayed(hideAlert, 8000);
     }
@@ -1997,21 +2025,22 @@ public class KidoActivity extends Activity {
         LinearLayout hs = new LinearLayout(this);
         hs.setOrientation(LinearLayout.VERTICAL);
         hs.setPadding(0, 0, 0, Kido.px(18));
-        hs.addView(text("VERIFICACIÓN DEL SISTEMA", Kido.condBold, 44, Kido.AMBER, 0.16f));
+        hs.addView(text(str(R.string.system_check), Kido.condBold, 44, Kido.AMBER, 0.16f));
         hs.addView(text("KIDŌ v" + versionName(), Kido.mono, 24, Kido.DIM, 0.06f));
         head.addView(hs);
         col.addView(head);
         col.addView(glowRule(Kido.AMBER));
 
         android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
+        String approved = str(R.string.approved);
         String[][] checks = {
-                {"SUBSISTEMA 01", "承認 APROBADO"},
-                {"SUBSISTEMA 02", "承認 APROBADO"},
-                {"SUBSISTEMA 03", "承認 APROBADO"},
-                {"PANTALLA // " + dm.widthPixels + "x" + dm.heightPixels, "OK"},
-                {"BUS DE ENTRADA // " + inputCount + " PUERTOS", "OK"},
-                {"CANALES // " + channelCount + " CARGADOS", "OK"},
-                {"MEMORIA LIBRE // " + freeMb() + " MB", "OK"}};
+                {str(R.string.subsystem, 1), approved},
+                {str(R.string.subsystem, 2), approved},
+                {str(R.string.subsystem, 3), approved},
+                {str(R.string.check_display, dm.widthPixels, dm.heightPixels), "OK"},
+                {str(R.string.check_inputs, inputCount), "OK"},
+                {str(R.string.check_channels, channelCount), "OK"},
+                {str(R.string.check_memory, freeMb()), "OK"}};
         List<View> steps = new ArrayList<>();
         for (String[] c : checks) {
             LinearLayout r = row();
@@ -2023,7 +2052,7 @@ public class KidoActivity extends Activity {
             col.addView(r, lp);
             steps.add(r);
         }
-        TextView done = text("全系統 正常   TODOS LOS SISTEMAS NORMALES", Kido.condBold, 44, Kido.GREEN, 0.12f);
+        TextView done = text("全系統 正常   " + str(R.string.all_nominal), Kido.condBold, 44, Kido.GREEN, 0.12f);
         done.setShadowLayer(Kido.px(18), 0, 0, Kido.withAlpha(Kido.GREEN, 0.55f));
         done.setAlpha(0f);
         LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(-2, -2);
@@ -2042,7 +2071,7 @@ public class KidoActivity extends Activity {
         LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(-1, Kido.px(28));
         tlp.topMargin = Kido.px(24);
         col.addView(track, tlp);
-        TextView build = text("VERSIÓN // GLIDIAN.DEV", Kido.mono, 20, Kido.DIM, 0.12f);
+        TextView build = text(str(R.string.build_credit), Kido.mono, 20, Kido.DIM, 0.12f);
         LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(-2, -2);
         blp.topMargin = Kido.px(22);
         col.addView(build, blp);
@@ -2069,10 +2098,16 @@ public class KidoActivity extends Activity {
         boot = null;
         b.animate().alpha(0f).setDuration(400).withEndAction(() -> root.removeView(b)).start();
         intro(zone);
-        log("ARRANQUE COMPLETO // TODOS LOS SISTEMAS NORMALES");
+        log(str(R.string.log_boot));
     }
 
     // ---------------------------------------------------------------- small helpers
+
+    /** A string from resources, filled in with Locale.ROOT so numbers always come out as plain digits. */
+    private String str(int id, Object... args) {
+        String s = getString(id);
+        return args.length == 0 ? s : String.format(Locale.ROOT, s, args);
+    }
 
     private TextView text(String s, Typeface tf, float size, int color, float spacing) {
         TextView t = new TextView(this);
@@ -2085,7 +2120,6 @@ public class KidoActivity extends Activity {
         return t;
     }
 
-    /** Shrinks the text until its longest word fits on one line, so names never break mid-word. */
     /** Shrinks a single-line label until it fits the width, for long device names on narrow input boxes. */
     private static void fitLine(TextView t, int width) {
         if (width <= 0) return;
@@ -2096,6 +2130,7 @@ public class KidoActivity extends Activity {
         if (w > width) t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, size * width / w * 0.98f);
     }
 
+    /** Shrinks the text until its longest word fits on one line, so names never break mid-word. */
     private static void fitWords(TextView t, int width) {
         Paint p = new Paint(t.getPaint());
         float size = t.getTextSize();
@@ -2114,8 +2149,14 @@ public class KidoActivity extends Activity {
         }
     }
 
-    private static String dateLine() {
-        return new SimpleDateFormat("EEE dd MMM yyyy", new Locale("es")).format(new Date()).replace(".", "").toUpperCase(Locale.ROOT) + "  //  SISTEMA NORMAL";
+    private String dateLine() {
+        return dateText("EEE dd MMM yyyy", System.currentTimeMillis()) + "  //  " + str(R.string.system_nominal);
+    }
+
+    /** A date in the interface's language, in capitals and without abbreviation dots (MIÉ 21 OCT, not mié. 21 oct.). */
+    private String dateText(String pattern, long time) {
+        Locale l = Kido.dateLocale(this);
+        return new SimpleDateFormat(pattern, l).format(new Date(time)).replace(".", "").toUpperCase(l);
     }
 
     private String versionName() {
