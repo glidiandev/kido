@@ -12,7 +12,7 @@ import java.util.Locale;
 /**
  * Seven-segment clock: h:mm with small seconds, plus AM/PM unless the TV is set to 24-hour time.
  * Segments are hex-ended polygons; unlit segments stay faintly visible like a real display. Redraws
- * once a second.
+ * once a second. As a timer it shows a time it's given instead (m:ss, or h:mm:ss past an hour).
  */
 final class SegClockView extends View {
     // Segments a..g on a 60x100 digit cell.
@@ -34,6 +34,8 @@ final class SegClockView extends View {
     private final Paint off = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint ampm = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path path = new Path();
+    private final boolean timer;
+    private long elapsed;
 
     private final Runnable tick = new Runnable() {
         @Override
@@ -44,7 +46,12 @@ final class SegClockView extends View {
     };
 
     SegClockView(Context c) {
+        this(c, false);
+    }
+
+    SegClockView(Context c, boolean timer) {
         super(c);
+        this.timer = timer;
         on.setColor(Kido.INK);
         on.setShadowLayer(Kido.px(12), 0, 0, Kido.withAlpha(Kido.ORANGE, 0.6f));
         off.setColor(Kido.withAlpha(Kido.AMBER, 0.07f));
@@ -52,10 +59,24 @@ final class SegClockView extends View {
         ampm.setTypeface(Kido.condBold);
     }
 
+    /** The digits' color and glow, for a timer that follows an app's color. */
+    void setColor(int color) {
+        on.setColor(color);
+        on.setShadowLayer(Kido.px(8), 0, 0, Kido.withAlpha(color, 0.6f));
+        invalidate();
+    }
+
+    /** Timer mode: the time to show, in seconds. */
+    void showElapsed(long seconds) {
+        if (seconds == elapsed) return;
+        elapsed = seconds;
+        invalidate();
+    }
+
     @Override
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
-        post(tick);
+        if (!timer) post(tick);
     }
 
     @Override
@@ -66,6 +87,10 @@ final class SegClockView extends View {
 
     @Override
     protected void onDraw(Canvas canvas) {
+        if (timer) {
+            drawTimer(canvas);
+            return;
+        }
         // The view is padded so the glow around the digits has room to show.
         float pad = Kido.px(14);
         canvas.translate(pad, pad);
@@ -92,6 +117,22 @@ final class SegClockView extends View {
         canvas.restore();
         ampm.setTextSize(big * 0.24f);
         if (!h24) canvas.drawText(now.get(Calendar.AM_PM) == Calendar.AM ? "AM" : "PM", x + big * 0.2f, big - big * 0.02f, ampm);
+    }
+
+    private void drawTimer(Canvas canvas) {
+        float pad = getHeight() * 0.15f;
+        float big = getHeight() - pad * 2, bigW = big * 0.58f, gap = big * 0.06f;
+        long h = elapsed / 3600, m = elapsed / 60 % 60, s = elapsed % 60;
+        String[] groups = h > 0
+                ? new String[]{String.valueOf(h), String.format(Locale.ROOT, "%02d", m), String.format(Locale.ROOT, "%02d", s)}
+                : new String[]{String.valueOf(m), String.format(Locale.ROOT, "%02d", s)};
+        canvas.translate(pad + big * 0.12f, pad);
+        canvas.skew(-0.12f, 0);
+        float x = 0;
+        for (int g = 0; g < groups.length; g++) {
+            if (g > 0) x = colon(canvas, x, big);
+            for (char d : groups[g].toCharArray()) { digit(canvas, d - '0', x, 0, big); x += bigW + gap; }
+        }
     }
 
     private float colon(Canvas c, float x, float big) {

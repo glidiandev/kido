@@ -126,7 +126,18 @@ public class KidoActivity extends Activity {
 
     private FrameLayout alert, boot;
     private View scan;
-    private TextView alertDetail, ticker, dataValues;
+    private TextView alertDetail, ticker, dataLabels, dataValues;
+    // NOW PLAYING: an opt-in panel that takes the data block's place while something plays.
+    private NowPlaying nowPlaying;
+    private FrameLayout npPanel;
+    private View npAccent;
+    private GradientDrawable npBg, npTagBg;
+    private TextView npTitle, npArtist, npState;
+    private SegClockView npTime;
+    private PlayGlyph npGlyph;
+    private PillsView npMeter;
+    private String npLast;
+    private final Map<String, App> appsByPkg = new HashMap<>();
     private final Map<String, TextView> inputMeta = new HashMap<>();
     private final Map<String, String> inputLabels = new HashMap<>();
     // HDMI ports by input id: the port's own label ("HDMI 1"), its number, and the views that show the device on it.
@@ -176,6 +187,7 @@ public class KidoActivity extends Activity {
         prefs = getSharedPreferences("kido", MODE_PRIVATE);
         Kido.applyTheme(prefs.getInt("theme", 0));
         beeps = new Beeps(prefs.getBoolean("sound", true));
+        nowPlaying = new NowPlaying(this, handler, this::showNowPlaying);
         build();
         tvInputs = (TvInputManager) getSystemService(TV_INPUT_SERVICE);
         if (tvInputs != null) tvInputs.registerCallback(inputWatch, handler);
@@ -221,6 +233,8 @@ public class KidoActivity extends Activity {
         root.addView(board, new FrameLayout.LayoutParams(Kido.px(3900), Kido.px(2300)));
         List<App> apps = loadApps();
         channelCount = apps.size();
+        appsByPkg.clear();
+        for (App a : apps) appsByPkg.put(a.pkg, a);
         List<App> favs = new ArrayList<>(), rest = new ArrayList<>();
         for (String pkg : pins(apps)) {
             for (App a : apps) if (a.pkg.equals(pkg)) favs.add(a);
@@ -713,12 +727,13 @@ public class KidoActivity extends Activity {
         dateText = text(dateLine(), Kido.mono, 26, Kido.DIM, 0.06f);
         place(hud, dateText, 100, 268, -1, -1);
 
-        TextView dataLabels = text(str(R.string.data_labels), Kido.mono, 17, Kido.DIM, 0.06f);
+        dataLabels = text(str(R.string.data_labels), Kido.mono, 17, Kido.DIM, 0.06f);
         dataLabels.setLineSpacing(Kido.px(6), 1f);
         place(hud, dataLabels, 800, 76, -1, -1);
         dataValues = text("", Kido.mono, 17, Kido.INK, 0.06f);
         dataValues.setLineSpacing(Kido.px(6), 1f);
         place(hud, dataValues, 930, 76, 220, -1);
+        buildNowPlaying(hud);
 
         for (int i = 0; i < 3; i++) {
             FrameLayout tab = new FrameLayout(this);
@@ -774,6 +789,107 @@ public class KidoActivity extends Activity {
         footerZone.setGravity(Gravity.END);
         place(hud, footerZone, 1300, 1050, 520, -1);
         showTabs(0);
+        showNowPlaying();
+    }
+
+    /**
+     * The NOW PLAYING panel: 音楽 tag, title, artist and app, a seven-segment elapsed time, a play or pause mark
+     * and a level meter, all in the playing app's color. It is only a readout and never takes focus; holding
+     * OK on the playing app (or the remote's own play/pause key) controls it.
+     */
+    private void buildNowPlaying(FrameLayout hud) {
+        npPanel = new FrameLayout(this);
+        npBg = box(0xE6040404, Kido.LINE, 2);
+        npPanel.setBackground(npBg);
+        npAccent = new View(this);
+        place(npPanel, npAccent, 0, 0, 6, 150);
+        LinearLayout head = row();
+        head.setGravity(Gravity.CENTER_VERTICAL);
+        TextView tag = text("音楽", Kido.mincho, 20, 0xFF120800, 0);
+        npTagBg = new GradientDrawable();
+        tag.setBackground(npTagBg);
+        tag.setPadding(Kido.px(6), Kido.px(2), Kido.px(6), Kido.px(3));
+        head.addView(tag);
+        head.addView(gap(8));
+        head.addView(text(str(R.string.now_playing), Kido.condBold, 18, Kido.INK, 0.12f));
+        place(npPanel, head, 18, 12, -1, -1);
+        npState = text("", Kido.mincho, 18, Kido.DIM, 0);
+        npState.setGravity(Gravity.END);
+        place(npPanel, npState, 230, 14, 84, -1);
+        npTitle = text("", Kido.condBold, 30, Kido.CREAM, 0.04f);
+        npTitle.setSingleLine(true);
+        npTitle.setEllipsize(TextUtils.TruncateAt.END);
+        place(npPanel, npTitle, 18, 46, 296, -1);
+        npArtist = text("", Kido.mono, 18, Kido.DIM, 0);
+        npArtist.setSingleLine(true);
+        npArtist.setEllipsize(TextUtils.TruncateAt.END);
+        place(npPanel, npArtist, 18, 84, 296, -1);
+        npTime = new SegClockView(this, true);
+        place(npPanel, npTime, 10, 106, 128, 40);
+        npGlyph = new PlayGlyph(this);
+        place(npPanel, npGlyph, 146, 116, 20, 20);
+        npMeter = new PillsView(this, 12);
+        place(npPanel, npMeter, 178, 114, 136, 24);
+        npPanel.setVisibility(View.GONE);
+        place(hud, npPanel, 800, 56, 330, 150);
+    }
+
+    /** Shows what's playing, or the data block again when nothing is (or NOW PLAYING is off). */
+    private void showNowPlaying() {
+        if (npPanel == null) return;
+        boolean show = prefs.getBoolean("nowplaying", false) && nowPlaying.active();
+        npPanel.setVisibility(show ? View.VISIBLE : View.GONE);
+        dataLabels.setVisibility(show ? View.INVISIBLE : View.VISIBLE);
+        dataValues.setVisibility(show ? View.INVISIBLE : View.VISIBLE);
+        handler.removeCallbacks(meterTick);
+        if (!show) {
+            npLast = null;
+            return;
+        }
+        String pkg = nowPlaying.packageName();
+        App app = appsByPkg.get(pkg);
+        int color = app != null ? app.look.glow : Kido.Cat.MUSIC.color;
+        String appName = app != null ? app.look.name : appLabel(pkg);
+        String title = nowPlaying.title().toUpperCase(Locale.ROOT);
+        String artist = nowPlaying.artist();
+        npTitle.setText(title);
+        npArtist.setText((artist != null && !artist.isEmpty() ? artist + " // " : "") + appName.toUpperCase(Locale.ROOT));
+        npAccent.setBackgroundColor(color);
+        npBg.setStroke(Kido.px(2), Kido.withAlpha(color, 0.55f));
+        npTagBg.setColor(color);
+        npTime.setColor(color);
+        boolean playing = nowPlaying.playing();
+        npState.setText(playing ? "再生中" : "一時停止");
+        npGlyph.set(playing, color);
+        long t = nowPlaying.elapsedSeconds();
+        npTime.setVisibility(t >= 0 ? View.VISIBLE : View.INVISIBLE);
+        if (t >= 0) npTime.showElapsed(t);
+        if (playing) handler.post(meterTick);
+        else npMeter.setLevel(0f);
+        if (!title.equals(npLast)) {
+            npLast = title;
+            log(str(R.string.log_playing, title));
+        }
+    }
+
+    /** The level meter is decoration: it moves while something plays, like a deck's meter would. */
+    private final Runnable meterTick = new Runnable() {
+        private final Random random = new Random();
+
+        @Override
+        public void run() {
+            npMeter.setLevel(0.35f + random.nextFloat() * 0.6f);
+            handler.postDelayed(this, 160);
+        }
+    };
+
+    private String appLabel(String pkg) {
+        try {
+            PackageManager pm = getPackageManager();
+            return String.valueOf(pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)));
+        } catch (PackageManager.NameNotFoundException e) {
+            return pkg;
+        }
     }
 
     // ---------------------------------------------------------------- focus
@@ -1249,6 +1365,7 @@ public class KidoActivity extends Activity {
         handler.post(dataTick);
         launch.setVisibility(View.GONE);
         hideAlert.run();
+        if (prefs.getBoolean("nowplaying", false)) nowPlaying.start();
         if (appsChanged) {
             appsChanged = false;
             Item last = lastFocused != null ? (Item) lastFocused.getTag() : null;
@@ -1263,6 +1380,8 @@ public class KidoActivity extends Activity {
         resumed = false;
         handler.removeCallbacks(goIdle);
         handler.removeCallbacks(dataTick);
+        handler.removeCallbacks(meterTick);
+        nowPlaying.stop();
         super.onPause();
     }
 
@@ -1317,6 +1436,9 @@ public class KidoActivity extends Activity {
         List<String> pins = shownPins();
         int at = pins.indexOf(app.pkg);
         List<String[]> rows = new ArrayList<>();
+        if (nowPlaying.active() && app.pkg.equals(nowPlaying.packageName())) {
+            rows.add(new String[]{"再生", str(nowPlaying.playing() ? R.string.menu_pause : R.string.menu_play), "playpause"});
+        }
         if (pinned ? pins.size() > 1 : hexViews.size() > 1) rows.add(new String[]{"移動", str(R.string.menu_move), "move"});
         if (pinned) {
             rows.add(new String[]{"解除", str(R.string.menu_unpin), "unpin"});
@@ -1337,6 +1459,7 @@ public class KidoActivity extends Activity {
         List<String[]> rows = new ArrayList<>();
         rows.add(new String[]{"音響", str(beeps.isOn() ? R.string.menu_sound_on : R.string.menu_sound_off), "sound"});
         rows.add(new String[]{"入力", str(inputKeyOn() ? R.string.menu_input_on : R.string.menu_input_off), "inputkey"});
+        rows.add(new String[]{"音楽", str(prefs.getBoolean("nowplaying", false) ? R.string.menu_np_on : R.string.menu_np_off), "nowplaying"});
         String[] themes = getResources().getStringArray(R.array.theme_names);
         for (int i = 0; i < Kido.THEME_KANJI.length; i++) {
             rows.add(new String[]{Kido.THEME_KANJI[i], str(R.string.menu_theme, themes[i]) + (i == Kido.theme ? "  ◀" : ""), "theme" + i});
@@ -1350,6 +1473,11 @@ public class KidoActivity extends Activity {
             if (action.equals("inputkey")) {
                 closeMenu();
                 toggleInputKey();
+                return;
+            }
+            if (action.equals("nowplaying")) {
+                closeMenu();
+                toggleNowPlaying();
                 return;
             }
             int t = Integer.parseInt(action.substring(5));
@@ -1435,6 +1563,10 @@ public class KidoActivity extends Activity {
             case "move":
                 closeMenu();
                 startMove(app);
+                return;
+            case "playpause":
+                closeMenu();
+                nowPlaying.playPause();
                 return;
             case "left":
                 Collections.swap(pins, at, at - 1);
@@ -1710,6 +1842,10 @@ public class KidoActivity extends Activity {
             if (!date.contentEquals(dateText.getText())) dateText.setText(date);
             dataValues.setText(String.format(Locale.ROOT, "%04d  OK\n%d MB\n%02d:%02d:%02d\n%d // %d ",
                     sysCheck, freeMb(), up / 3600, up / 60 % 60, up % 60, inputCount, linked) + str(R.string.linked_short));
+            if (npPanel.getVisibility() == View.VISIBLE) {
+                long t = nowPlaying.elapsedSeconds();
+                if (t >= 0) npTime.showElapsed(t);
+            }
             renderTicker();
             if (SystemClock.uptimeMillis() - lastLogAt > 6000) {
                 log(str(R.string.sys_check_log, ++sysCheck, new Random().nextInt(0x10000)));
@@ -1823,6 +1959,33 @@ public class KidoActivity extends Activity {
             log(str(on ? R.string.log_input_on : R.string.log_input_off));
         } catch (SecurityException e) {
             flashToast("入力", str(R.string.input_no_permission));
+        }
+    }
+
+    /**
+     * NOW PLAYING on or off. It needs notification access, which Android only lets the user give: KIDŌ opens
+     * the TV's notification access screen if it has one, and shows the adb command either way (many TVs hide
+     * that screen). Turning it off stops reading at once; taking the access back is the adb command it shows.
+     */
+    private void toggleNowPlaying() {
+        boolean on = !prefs.getBoolean("nowplaying", false);
+        prefs.edit().putBoolean("nowplaying", on).apply();
+        String component = NowPlaying.listener(this).flattenToShortString();
+        log(str(on ? R.string.log_np_on : R.string.log_np_off));
+        if (!on) {
+            nowPlaying.stop();
+            flashToast("音楽", str(R.string.np_off_toast, component));
+            return;
+        }
+        if (nowPlaying.start()) {
+            flashToast("音楽", str(R.string.np_on_toast));
+            return;
+        }
+        flashToast("音楽", str(R.string.np_needs_access, component));
+        try {
+            startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        } catch (ActivityNotFoundException e) {
+            // No such screen on this TV: the adb command in the strip is the way.
         }
     }
 
@@ -2221,6 +2384,39 @@ public class KidoActivity extends Activity {
         Random r = new Random();
         for (int i = 0; i < n; i++) b.append(r.nextBoolean() ? '1' : '0');
         return b.toString();
+    }
+
+    /** A small play or pause mark, drawn rather than typed so it doesn't depend on a font having the symbol. */
+    static final class PlayGlyph extends View {
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Path path = new Path();
+        private boolean playing;
+
+        PlayGlyph(Context c) {
+            super(c);
+        }
+
+        void set(boolean playing, int color) {
+            this.playing = playing;
+            paint.setColor(color);
+            invalidate();
+        }
+
+        @Override
+        protected void onDraw(Canvas c) {
+            float w = getWidth(), h = getHeight();
+            if (playing) {
+                path.reset();
+                path.moveTo(0, 0);
+                path.lineTo(w, h / 2);
+                path.lineTo(0, h);
+                path.close();
+                c.drawPath(path, paint);
+            } else {
+                c.drawRect(0, 0, w * 0.36f, h, paint);
+                c.drawRect(w * 0.64f, 0, w, h, paint);
+            }
+        }
     }
 
     /** Diagonal hazard stripes. */

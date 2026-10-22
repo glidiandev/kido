@@ -142,6 +142,19 @@
     <string name="dream_title">EN ESPERA // KIDŌ v%s</string>
     <string name="dream_data">ACTIVO %1$02d:%2$02d:%3$02d   //   MEM LIBRE %4$d MB   //   SIN ACTIVIDAD</string>
 
+    <string name="np_service_name">KIDŌ En reproducción</string>
+    <string name="now_playing">EN REPRODUCCIÓN</string>
+    <string name="menu_np_on">EN REPRODUCCIÓN: SÍ // APAGAR</string>
+    <string name="menu_np_off">EN REPRODUCCIÓN: NO // ENCENDER</string>
+    <string name="menu_play">REPRODUCIR</string>
+    <string name="menu_pause">PAUSA</string>
+    <string name="np_on_toast">EN REPRODUCCIÓN ACTIVADO. LO QUE SUENA APARECE JUNTO AL RELOJ.</string>
+    <string name="np_needs_access">FALTA ACCESO: adb shell cmd notification allow_listener %s</string>
+    <string name="np_off_toast">APAGADO. REVOCAR: adb shell cmd notification disallow_listener %s</string>
+    <string name="log_np_on">EN REPRODUCCIÓN SÍ</string>
+    <string name="log_np_off">EN REPRODUCCIÓN NO</string>
+    <string name="log_playing">SUENA %s</string>
+
     <string name="panel_title">ENTRADAS</string>
     <string name="panel_hint">ELIGE UNA FUENTE // ATRÁS CERRAR</string>
     <string name="panel_none">SIN ENTRADAS</string>

@@ -159,6 +159,20 @@
     <string name="dream_title">STANDBY // KIDŌ v%s</string>
     <string name="dream_data">UPTIME %1$02d:%2$02d:%3$02d   //   FREE MEM %4$d MB   //   NO INPUT</string>
 
+    <!-- NOW PLAYING (opt-in): what a media app is playing, beside the clock -->
+    <string name="np_service_name">KIDŌ Now playing</string>
+    <string name="now_playing">NOW PLAYING</string>
+    <string name="menu_np_on">NOW PLAYING: ON // TURN OFF</string>
+    <string name="menu_np_off">NOW PLAYING: OFF // TURN ON</string>
+    <string name="menu_play">PLAY</string>
+    <string name="menu_pause">PAUSE</string>
+    <string name="np_on_toast">NOW PLAYING ON. WHAT\'S PLAYING SHOWS NEXT TO THE CLOCK.</string>
+    <string name="np_needs_access">NEEDS ACCESS: adb shell cmd notification allow_listener %s</string>
+    <string name="np_off_toast">OFF. TO REVOKE: adb shell cmd notification disallow_listener %s</string>
+    <string name="log_np_on">NOW PLAYING ON</string>
+    <string name="log_np_off">NOW PLAYING OFF</string>
+    <string name="log_playing">PLAYING %s</string>
+
     <!-- Inputs panel -->
     <string name="panel_title">INPUTS</string>
     <string name="panel_hint">SELECT A SOURCE // BACK CLOSES</string>
