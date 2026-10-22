@@ -326,7 +326,7 @@ final class Kido {
 
     /**
      * The color that stands out in an app's banner (or icon): colorful pixels are grouped by hue, weighted by
-     * how vivid they are, and the strongest group wins. White, black and grey logos give 0, so the category
+     * how vivid they are, and the strongest group wins. White, black and gray logos give 0, so the category
      * color is used. The result is brightened a little so it glows on the black screen.
      */
     static int logoColor(PackageManager pm, ResolveInfo ri, String pkg) {

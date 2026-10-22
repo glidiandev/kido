@@ -44,7 +44,7 @@ Every app gets a kanji and a category: 映画 FILM, 番組 SERIES, 家族 FAMILY
 Popular apps (Netflix, Prime Video, HBO Max, Disney+, YouTube, Hulu, Paramount+, Apple TV, Plex, Tubi,
 Pluto TV, Twitch, Kodi, Sling, YouTube TV, Spotify, Amazon Music, ESPN, Jellyfin, VLC and more) have a
 look of their own with their brand color. Anything else is sorted by the words in its name, and its color
-comes from its own logo: KIDŌ finds the strongest color in the app's banner. White, black or grey logos
+comes from its own logo: KIDŌ finds the strongest color in the app's banner. White, black or gray logos
 get the category's color.
 
 The manuals, firmware updaters, store demos and setup apps that come with many TVs (Sharp, Google, TCL,

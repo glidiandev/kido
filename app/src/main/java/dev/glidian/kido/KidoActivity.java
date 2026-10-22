@@ -1879,7 +1879,7 @@ public class KidoActivity extends Activity {
 
     private final Runnable refreshDevicesRun = this::refreshDevices;
 
-    /** CEC devices often announce themselves in a burst; wait for it to settle before relabelling. */
+    /** CEC devices often announce themselves in a burst; wait for it to settle before relabeling. */
     private void refreshSoon() {
         handler.removeCallbacks(refreshDevicesRun);
         handler.postDelayed(refreshDevicesRun, 400);
