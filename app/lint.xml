@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <lint>
-    <!-- The interface is deliberately English and Japanese, not translated. -->
+    <!-- The interface is deliberately Spanish and Japanese, written in code rather than in string resources. -->
     <issue id="SetTextI18n" severity="ignore" />
     <!-- Views are built in code, never inflated from XML. -->
     <issue id="ViewConstructor" severity="ignore" />

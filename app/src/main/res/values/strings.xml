@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">KIDŌ</string>
-    <string name="dream_name">KIDŌ Standby</string>
+    <string name="dream_name">KIDŌ En espera</string>
+    <string name="input_service_name">KIDŌ botón Input</string>
+    <string name="input_service_description">Abre el panel de entradas de KIDŌ con el botón Input del control. Solo atiende ese botón.</string>
 </resources>
