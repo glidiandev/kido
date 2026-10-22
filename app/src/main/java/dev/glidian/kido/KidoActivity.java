@@ -729,10 +729,12 @@ public class KidoActivity extends Activity {
 
         dataLabels = text(str(R.string.data_labels), Kido.mono, 17, Kido.DIM, 0.06f);
         dataLabels.setLineSpacing(Kido.px(6), 1f);
-        place(hud, dataLabels, 800, 76, -1, -1);
+        // The data block and the NOW PLAYING panel share one spot: left-aligned with the section tabs below,
+        // which keeps clear of the clock even at 12:59 PM, its widest.
+        place(hud, dataLabels, 748, 76, -1, -1);
         dataValues = text("", Kido.mono, 17, Kido.INK, 0.06f);
         dataValues.setLineSpacing(Kido.px(6), 1f);
-        place(hud, dataValues, 930, 76, 220, -1);
+        place(hud, dataValues, 878, 76, 220, -1);
         buildNowPlaying(hud);
 
         for (int i = 0; i < 3; i++) {
@@ -815,23 +817,23 @@ public class KidoActivity extends Activity {
         place(npPanel, head, 18, 12, -1, -1);
         npState = text("", Kido.mincho, 18, Kido.DIM, 0);
         npState.setGravity(Gravity.END);
-        place(npPanel, npState, 230, 14, 84, -1);
+        place(npPanel, npState, 300, 14, 84, -1);
         npTitle = text("", Kido.condBold, 30, Kido.CREAM, 0.04f);
         npTitle.setSingleLine(true);
         npTitle.setEllipsize(TextUtils.TruncateAt.END);
-        place(npPanel, npTitle, 18, 46, 296, -1);
+        place(npPanel, npTitle, 18, 46, 366, -1);
         npArtist = text("", Kido.mono, 18, Kido.DIM, 0);
         npArtist.setSingleLine(true);
         npArtist.setEllipsize(TextUtils.TruncateAt.END);
-        place(npPanel, npArtist, 18, 84, 296, -1);
+        place(npPanel, npArtist, 18, 84, 366, -1);
         npTime = new SegClockView(this, true);
         place(npPanel, npTime, 10, 106, 128, 40);
         npGlyph = new PlayGlyph(this);
         place(npPanel, npGlyph, 146, 116, 20, 20);
         npMeter = new PillsView(this, 12);
-        place(npPanel, npMeter, 178, 114, 136, 24);
+        place(npPanel, npMeter, 178, 114, 206, 24);
         npPanel.setVisibility(View.GONE);
-        place(hud, npPanel, 800, 56, 330, 150);
+        place(hud, npPanel, 730, 56, 400, 150);
     }
 
     /** Shows what's playing, or the data block again when nothing is (or NOW PLAYING is off). */
