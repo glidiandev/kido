@@ -146,6 +146,7 @@
     <string name="now_playing">EN REPRODUCCIÓN</string>
     <string name="menu_np_on">EN REPRODUCCIÓN: SÍ // APAGAR</string>
     <string name="menu_np_off">EN REPRODUCCIÓN: NO // ENCENDER</string>
+    <string name="np_hint">OK PAUSA/SEGUIR // ◀ ▶ PISTA</string>
     <string name="menu_play">REPRODUCIR</string>
     <string name="menu_pause">PAUSA</string>
     <string name="np_on_toast">EN REPRODUCCIÓN ACTIVADO. LO QUE SUENA APARECE JUNTO AL RELOJ.</string>

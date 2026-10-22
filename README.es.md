@@ -14,7 +14,7 @@ cada app.
 
 ![Pantalla principal en español](docs/es-inicio.jpg)
 
-**Android TV 8.0+ · 256 KB · sin permiso de internet · español e inglés · libre y de código abierto (MIT)**
+**Android TV 8.0+ · 257 KB · sin permiso de internet · español e inglés · libre y de código abierto (MIT)**
 
 ## Qué hay en pantalla
 
@@ -59,8 +59,10 @@ blanco, negro o gris, usa el color de la categoría.
 Si lo enciendes y una app está reproduciendo algo (Spotify, YouTube Music, una app de video), el bloque de
 datos junto al reloj se convierte en un panel 音楽 EN REPRODUCCIÓN con el color de la app: título, artista,
 el tiempo transcurrido en siete segmentos y un medidor de nivel. Cuando no suena nada, vuelve el bloque de
-datos. Mantén OK sobre la app que suena para reproducir o pausar, o usa el botón de reproducir/pausa del
-control.
+datos. Para controlarlo, pulsa **arriba** desde los paneles de INICIO: **OK** reproduce o pausa,
+**izquierda** y **derecha** cambian de pista (si la app lo permite) y **abajo** o **Atrás** te devuelven. Nunca
+toma el foco por sí solo. También puedes mantener OK sobre la app que suena o usar el botón de
+reproducir/pausa del control.
 
 Viene **apagado**: mantén OK sobre **AJUSTES** y elige **EN REPRODUCCIÓN: NO // ENCENDER**.
 
@@ -120,6 +122,7 @@ adb shell pm revoke dev.glidian.kido android.permission.WRITE_SECURE_SETTINGS
 | OK                         | Abrir la app o la entrada                                                                    |
 | Mantener OK sobre una app  | **MOVER**, fijar en INICIO, quitar de INICIO o ver la información de la app. En la app que suena, también reproducir o pausar |
 | Mantener OK sobre Ajustes  | Sonido, botón Input, EN REPRODUCCIÓN y tema de color                                          |
+| Arriba desde INICIO        | El panel EN REPRODUCCIÓN, si suena algo (OK reproducir/pausa, izquierda/derecha pista, abajo volver) |
 | Atrás                      | Volver a los paneles principales                                                             |
 | Home                       | Volver a KIDŌ desde cualquier lugar, una vez que es tu pantalla de inicio                    |
 | Input                      | Panel de entradas (si el ayudante está activo)                                               |

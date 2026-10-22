@@ -164,6 +164,7 @@
     <string name="now_playing">NOW PLAYING</string>
     <string name="menu_np_on">NOW PLAYING: ON // TURN OFF</string>
     <string name="menu_np_off">NOW PLAYING: OFF // TURN ON</string>
+    <string name="np_hint">OK PLAY/PAUSE // ◀ ▶ TRACK</string>
     <string name="menu_play">PLAY</string>
     <string name="menu_pause">PAUSE</string>
     <string name="np_on_toast">NOW PLAYING ON. WHAT\'S PLAYING SHOWS NEXT TO THE CLOCK.</string>

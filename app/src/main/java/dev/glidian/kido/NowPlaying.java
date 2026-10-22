@@ -153,4 +153,14 @@ final class NowPlaying {
         if (playing()) current.getTransportControls().pause();
         else current.getTransportControls().play();
     }
+
+    /** Next or previous track, only if the app says it can. True when it was asked to skip. */
+    boolean skip(boolean next) {
+        PlaybackState s = current != null ? current.getPlaybackState() : null;
+        long action = next ? PlaybackState.ACTION_SKIP_TO_NEXT : PlaybackState.ACTION_SKIP_TO_PREVIOUS;
+        if (s == null || (s.getActions() & action) == 0) return false;
+        if (next) current.getTransportControls().skipToNext();
+        else current.getTransportControls().skipToPrevious();
+        return true;
+    }
 }

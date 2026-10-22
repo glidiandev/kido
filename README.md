@@ -10,7 +10,7 @@ no rows of recommendations, no internet access at all.
 
 *Recorded on a Sharp AQUOS 4K TV. KIDŌ (起動) means "start up".*
 
-**Android TV 8.0+ · 256 KB · no internet permission · English and Spanish · free and open source (MIT)**
+**Android TV 8.0+ · 257 KB · no internet permission · English and Spanish · free and open source (MIT)**
 
 **Try it in your browser:** [glidian.dev/kido/demo](https://glidian.dev/kido/demo/) (arrow keys and Enter are the remote)
 
@@ -81,6 +81,7 @@ KIDŌ is set to, and the TV starts it after the idle time you set there.
 | OK | Open the app or input |
 | Hold OK on an app | Move it, pin it to the main panels, unpin it, or open its app info. On the app that's playing, also PLAY or PAUSE |
 | Hold OK on Settings | Sound on or off, the Input button helper, NOW PLAYING, and the color theme |
+| Up from the main panels | The NOW PLAYING panel, when something is playing (OK play/pause, Left/Right track, Down back) |
 | Back | Return to the main panels |
 | Home | Back to KIDŌ from anywhere, once it's your Home screen |
 | Input | The inputs panel, if you've turned on the [Input button helper](#the-input-button-optional) |
@@ -99,8 +100,12 @@ KIDŌ is set to, and the TV starts it after the idle time you set there.
 When it's on and an app is playing something (Spotify, YouTube Music, a video app), the data block next to
 the clock becomes a NOW PLAYING panel: the title, the artist and the app, how far in you are on a
 seven-segment display, a play or pause mark and a small level meter, all in the app's color. When nothing
-plays, the data block comes back. Hold OK on the app that's playing to play or pause it, or use the
-remote's own play/pause button.
+plays, the data block comes back.
+
+To control it, press **Up** from the main panels: the panel lights up like any tile, **OK** plays or
+pauses, **Left** and **Right** skip to the previous or next track (when the app allows it), and **Down** or
+**Back** take you back. It never grabs focus by itself. Holding OK on the app that's playing, or the
+remote's own play/pause button, works too.
 
 It's **off** until you turn it on: hold OK on **Settings** and choose **NOW PLAYING: OFF // TURN ON**.
 

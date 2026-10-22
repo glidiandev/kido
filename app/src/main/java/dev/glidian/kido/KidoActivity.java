@@ -132,7 +132,9 @@ public class KidoActivity extends Activity {
     private FrameLayout npPanel;
     private View npAccent;
     private GradientDrawable npBg, npTagBg;
-    private TextView npTitle, npArtist, npState;
+    private TextView npTag, npHead, npTitle, npArtist, npState, npHint;
+    private int npColor;
+    private View npReturn;      // where focus goes back to when it leaves the panel
     private SegClockView npTime;
     private PlayGlyph npGlyph;
     private PillsView npMeter;
@@ -796,24 +798,26 @@ public class KidoActivity extends Activity {
 
     /**
      * The NOW PLAYING panel: 音楽 tag, title, artist and app, a seven-segment elapsed time, a play or pause mark
-     * and a level meter, all in the playing app's color. It is only a readout and never takes focus; holding
-     * OK on the playing app (or the remote's own play/pause key) controls it.
+     * and a level meter, all in the playing app's color. It never takes focus by itself: Up from the main panels
+     * moves onto it (see npKey), and holding OK on the playing app or the remote's own play/pause key work too.
      */
     private void buildNowPlaying(FrameLayout hud) {
         npPanel = new FrameLayout(this);
+        npPanel.setFocusable(true);
         npBg = box(0xE6040404, Kido.LINE, 2);
         npPanel.setBackground(npBg);
         npAccent = new View(this);
         place(npPanel, npAccent, 0, 0, 6, 150);
         LinearLayout head = row();
         head.setGravity(Gravity.CENTER_VERTICAL);
-        TextView tag = text("音楽", Kido.mincho, 20, 0xFF120800, 0);
+        npTag = text("音楽", Kido.mincho, 20, 0xFF120800, 0);
         npTagBg = new GradientDrawable();
-        tag.setBackground(npTagBg);
-        tag.setPadding(Kido.px(6), Kido.px(2), Kido.px(6), Kido.px(3));
-        head.addView(tag);
+        npTag.setBackground(npTagBg);
+        npTag.setPadding(Kido.px(6), Kido.px(2), Kido.px(6), Kido.px(3));
+        head.addView(npTag);
         head.addView(gap(8));
-        head.addView(text(str(R.string.now_playing), Kido.condBold, 18, Kido.INK, 0.12f));
+        npHead = text(str(R.string.now_playing), Kido.condBold, 18, Kido.INK, 0.12f);
+        head.addView(npHead);
         place(npPanel, head, 18, 12, -1, -1);
         npState = text("", Kido.mincho, 18, Kido.DIM, 0);
         npState.setGravity(Gravity.END);
@@ -832,14 +836,88 @@ public class KidoActivity extends Activity {
         place(npPanel, npGlyph, 146, 116, 20, 20);
         npMeter = new PillsView(this, 12);
         place(npPanel, npMeter, 178, 114, 206, 24);
+        // Shown in place of the mark and meter while the panel has focus.
+        npHint = text(str(R.string.np_hint), Kido.mono, 16, Kido.DARK_TEXT, 0.04f);
+        npHint.setSingleLine(true);
+        npHint.setGravity(Gravity.END);
+        fitLine(npHint, Kido.px(238));
+        npHint.setVisibility(View.GONE);
+        place(npPanel, npHint, 146, 118, 238, -1);
+        npPanel.setOnFocusChangeListener((v, has) -> {
+            paintNowPlaying();
+            // The tile glow comes back on its own when focus returns to a tile.
+            if (has) for (GlowView g : zoneGlow) if (g != null) g.animate().alpha(0f).setDuration(200).start();
+            if (has && SystemClock.uptimeMillis() - lastKeyAt < 400) beeps.tick();
+        });
         npPanel.setVisibility(View.GONE);
         place(hud, npPanel, 730, 56, 400, 150);
+    }
+
+    /** Colors the panel: the app's color at rest, and KIDŌ's orange focus fill with dark text when focused. */
+    private void paintNowPlaying() {
+        boolean f = npPanel.isFocused();
+        int dark = Kido.DARK_TEXT;
+        npBg.setColor(f ? Kido.ORANGE : 0xE6040404);
+        npBg.setStroke(Kido.px(f ? 3 : 2), f ? Kido.FOCUS_RIM : Kido.withAlpha(npColor, 0.55f));
+        npAccent.setBackgroundColor(f ? dark : npColor);
+        npTagBg.setColor(f ? dark : npColor);
+        npTag.setTextColor(f ? Kido.ORANGE : 0xFF120800);
+        npHead.setTextColor(f ? dark : Kido.INK);
+        npState.setTextColor(f ? dark : Kido.DIM);
+        npTitle.setTextColor(f ? dark : Kido.CREAM);
+        npArtist.setTextColor(f ? dark : Kido.DIM);
+        npTime.setColor(f ? dark : npColor);
+        npGlyph.set(nowPlaying.playing(), npColor);
+        npGlyph.setVisibility(f ? View.INVISIBLE : View.VISIBLE);
+        npMeter.setVisibility(f ? View.INVISIBLE : View.VISIBLE);
+        npHint.setVisibility(f ? View.VISIBLE : View.GONE);
+    }
+
+    /**
+     * Keys while the panel has focus: OK plays or pauses, Left and Right skip tracks when the app allows it,
+     * Down or Back go back to where focus came from.
+     */
+    private boolean npKey(KeyEvent e) {
+        int k = e.getKeyCode();
+        boolean press = e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0;
+        switch (k) {
+            case KeyEvent.KEYCODE_DPAD_CENTER:
+            case KeyEvent.KEYCODE_ENTER:
+                if (press) {
+                    nowPlaying.playPause();
+                    beeps.tick();
+                }
+                return true;
+            case KeyEvent.KEYCODE_DPAD_LEFT:
+            case KeyEvent.KEYCODE_DPAD_RIGHT:
+                if (press && nowPlaying.skip(k == KeyEvent.KEYCODE_DPAD_RIGHT)) beeps.tick();
+                return true;
+            case KeyEvent.KEYCODE_DPAD_DOWN:
+                if (press) leaveNowPlaying();
+                return true;
+            case KeyEvent.KEYCODE_BACK:
+                if (e.getAction() == KeyEvent.ACTION_UP) leaveNowPlaying();
+                return true;
+            case KeyEvent.KEYCODE_DPAD_UP:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /** Hands focus back to the panel it came from (or the first main panel). */
+    private void leaveNowPlaying() {
+        View back = npReturn != null && npReturn.isAttachedToWindow() ? npReturn : favViews.isEmpty() ? null : favViews.get(0);
+        npReturn = null;
+        if (back != null) back.requestFocus();
     }
 
     /** Shows what's playing, or the data block again when nothing is (or NOW PLAYING is off). */
     private void showNowPlaying() {
         if (npPanel == null) return;
         boolean show = prefs.getBoolean("nowplaying", false) && nowPlaying.active();
+        // Music stopped while the panel had focus: hand focus back before it hides, so it doesn't land at random.
+        if (!show && npPanel.hasFocus()) leaveNowPlaying();
         npPanel.setVisibility(show ? View.VISIBLE : View.GONE);
         dataLabels.setVisibility(show ? View.INVISIBLE : View.VISIBLE);
         dataValues.setVisibility(show ? View.INVISIBLE : View.VISIBLE);
@@ -856,13 +934,10 @@ public class KidoActivity extends Activity {
         String artist = nowPlaying.artist();
         npTitle.setText(title);
         npArtist.setText((artist != null && !artist.isEmpty() ? artist + " // " : "") + appName.toUpperCase(Locale.ROOT));
-        npAccent.setBackgroundColor(color);
-        npBg.setStroke(Kido.px(2), Kido.withAlpha(color, 0.55f));
-        npTagBg.setColor(color);
-        npTime.setColor(color);
+        npColor = color;
         boolean playing = nowPlaying.playing();
         npState.setText(playing ? "再生中" : "一時停止");
-        npGlyph.set(playing, color);
+        paintNowPlaying();
         long t = nowPlaying.elapsedSeconds();
         npTime.setVisibility(t >= 0 ? View.VISIBLE : View.INVISIBLE);
         if (t >= 0) npTime.showElapsed(t);
@@ -1291,7 +1366,7 @@ public class KidoActivity extends Activity {
         }
         if (idle && down) {
             idle = false;
-            if (lastFocused != null) focused(lastFocused);
+            if (lastFocused != null && getCurrentFocus() != npPanel) focused(lastFocused);
         }
         if (alert.getVisibility() == View.VISIBLE) {
             int k = event.getKeyCode();
@@ -1306,6 +1381,17 @@ public class KidoActivity extends Activity {
             }
         }
         if (launch.getVisibility() == View.VISIBLE) return true;    // ignore keys during the launch sequence
+        View cur = getCurrentFocus();
+        if (cur == npPanel && npKey(event)) return true;
+        // Up from the main panels reaches the NOW PLAYING panel when it shows; otherwise Up there does nothing.
+        if (event.getKeyCode() == KeyEvent.KEYCODE_DPAD_UP && npPanel.getVisibility() == View.VISIBLE
+                && cur != null && favViews.contains(cur)) {
+            if (down && event.getRepeatCount() == 0) {
+                npReturn = cur;
+                npPanel.requestFocus();
+            }
+            return true;
+        }
         if (isArrow(event.getKeyCode())) {
             if (up) {
                 holding = false;
