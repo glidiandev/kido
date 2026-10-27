@@ -399,10 +399,10 @@ public class KidoActivity extends Activity {
         TextView name = text(app.look.name.toUpperCase(Locale.ROOT), Kido.mincho, 50, Kido.CREAM, 0);
         final ImageView emblem = app.look.emblem != 0 ? new ImageView(this) : null;
         if (emblem != null) {
-            // A themed emblem fills the middle of the card in the app's color, with the name on one line under it.
+            // A themed emblem fills the middle of the card in the theme's color, with the name on one line under it.
             emblem.setImageResource(app.look.emblem);
             emblem.setScaleType(ImageView.ScaleType.FIT_CENTER);
-            emblem.setImageTintList(ColorStateList.valueOf(app.look.glow));
+            emblem.setImageTintList(ColorStateList.valueOf(Kido.AMBER));
             place(c, emblem, 24, 66, 268, 136);
             name.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, Kido.px(40));
             name.setSingleLine(true);
@@ -438,7 +438,7 @@ public class KidoActivity extends Activity {
             kanji.setTextColor(has ? t : Kido.INK);
             en.setTextColor(has ? t : Kido.INK);
             name.setTextColor(has ? t : Kido.CREAM);
-            if (emblem != null) emblem.setImageTintList(ColorStateList.valueOf(has ? t : app.look.glow));
+            if (emblem != null) emblem.setImageTintList(ColorStateList.valueOf(has ? t : Kido.AMBER));
             stripe.setColor(has ? 0xFF120800 : app.look.glow);
             stripe.setGlowing(!has);
             ready.setTextColor(has ? 0xFF1A0D00 : Kido.DIM);

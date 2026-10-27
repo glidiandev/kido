@@ -282,15 +282,16 @@ favorites and the hidden system apps are in `Kido.java`.
 
 ### Themed emblems
 
-An app can have its own emblem in the middle of its panel and hex. Add a **white emblem on a transparent
-background** (no frame or text, square works best) as `app/src/main/res/drawable-nodpi/emblem_<name>.png`,
+The 28 apps in the catalog have an emblem: a simplified version of the app's logo, drawn in the middle of its
+panel and in place of the name on its hex. To add one for another app, put a **white emblem on a transparent
+background** (no frame or box) in `app/src/main/res/drawable-nodpi/` as `emblem_<name>.png` or `.webp`,
 where `<name>` is either the app's short name from the catalog in `Kido.java` (for example
-`emblem_netflix.png`, `emblem_prime_video.png`) or its package name with dots turned into underscores
-(for example `emblem_com_example_app.png`). KIDŌ tints it in the app's color, so one white image works in
-every theme. Apps without an emblem keep their name and logo color, as now.
+`emblem_netflix.webp`, `emblem_prime_video.webp`) or its package name with dots turned into underscores
+(for example `emblem_com_example_app.png`). KIDŌ tints it in the theme's color, so one white image works in
+every theme. Apps without an emblem show their name instead.
 
-The debug build carries two plain test emblems (for Netflix and Spotify) in `app/src/debug`, so you can
-see how it looks; release builds don't include them.
+The emblems are fan-made simplifications of each app's logo. The names and logos belong to their owners, and
+KIDŌ isn't affiliated with or endorsed by any of them.
 
 ## Credits
 
