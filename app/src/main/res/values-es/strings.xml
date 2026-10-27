@@ -154,6 +154,10 @@
     <string name="np_off_toast">APAGADO. REVOCAR: adb shell cmd notification disallow_listener %s</string>
     <string name="log_np_on">EN REPRODUCCIÓN SÍ</string>
     <string name="log_np_off">EN REPRODUCCIÓN NO</string>
+    <string name="menu_logos_on">LOGOS: SÍ // APAGAR</string>
+    <string name="menu_logos_off">LOGOS: NO // ENCENDER</string>
+    <string name="log_logos_on">LOGOS SÍ</string>
+    <string name="log_logos_off">LOGOS NO</string>
     <string name="log_playing">SUENA %s</string>
 
     <string name="panel_title">ENTRADAS</string>

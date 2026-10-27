@@ -172,6 +172,10 @@
     <string name="np_off_toast">OFF. TO REVOKE: adb shell cmd notification disallow_listener %s</string>
     <string name="log_np_on">NOW PLAYING ON</string>
     <string name="log_np_off">NOW PLAYING OFF</string>
+    <string name="menu_logos_on">LOGOS: ON // TURN OFF</string>
+    <string name="menu_logos_off">LOGOS: OFF // TURN ON</string>
+    <string name="log_logos_on">LOGOS ON</string>
+    <string name="log_logos_off">LOGOS OFF</string>
     <string name="log_playing">PLAYING %s</string>
 
     <!-- Inputs panel -->

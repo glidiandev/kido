@@ -271,6 +271,8 @@ final class Kido {
      * app (e.g. emblem_com_example_app). It is tinted when drawn, so one image works in every theme.
      */
     static int emblemFor(Context c, String slug, String pkg) {
+        // Settings can turn logos off for the original text-only look.
+        if (!c.getSharedPreferences("kido", Context.MODE_PRIVATE).getBoolean("logos", true)) return 0;
         Resources res = c.getResources();
         int id = slug != null ? res.getIdentifier("emblem_" + slug, "drawable", c.getPackageName()) : 0;
         if (id == 0) id = res.getIdentifier("emblem_" + slugOf(pkg), "drawable", c.getPackageName());

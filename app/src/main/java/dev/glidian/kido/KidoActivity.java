@@ -1564,6 +1564,7 @@ public class KidoActivity extends Activity {
         rows.add(new String[]{"音響", str(beeps.isOn() ? R.string.menu_sound_on : R.string.menu_sound_off), "sound"});
         rows.add(new String[]{"入力", str(inputKeyOn() ? R.string.menu_input_on : R.string.menu_input_off), "inputkey"});
         rows.add(new String[]{"音楽", str(prefs.getBoolean("nowplaying", false) ? R.string.menu_np_on : R.string.menu_np_off), "nowplaying"});
+        rows.add(new String[]{"標記", str(prefs.getBoolean("logos", true) ? R.string.menu_logos_on : R.string.menu_logos_off), "logos"});
         String[] themes = getResources().getStringArray(R.array.theme_names);
         for (int i = 0; i < Kido.THEME_KANJI.length; i++) {
             rows.add(new String[]{Kido.THEME_KANJI[i], str(R.string.menu_theme, themes[i]) + (i == Kido.theme ? "  ◀" : ""), "theme" + i});
@@ -1582,6 +1583,16 @@ public class KidoActivity extends Activity {
             if (action.equals("nowplaying")) {
                 closeMenu();
                 toggleNowPlaying();
+                return;
+            }
+            if (action.equals("logos")) {
+                // Logos on the main panels, or the original text-only panels. The panels rebuild either way.
+                boolean on = !prefs.getBoolean("logos", true);
+                prefs.edit().putBoolean("logos", on).apply();
+                log(str(on ? R.string.log_logos_on : R.string.log_logos_off));
+                closeMenu();
+                build();
+                if (!sysViews.isEmpty()) sysViews.get(sysViews.size() - 1).requestFocus();
                 return;
             }
             int t = Integer.parseInt(action.substring(5));
@@ -1747,7 +1758,10 @@ public class KidoActivity extends Activity {
         boolean hive = it.zone == 1;
         List<View> seq = new ArrayList<>(hive ? hexViews : favViews);
         int i = seq.indexOf(moving), n = seq.size(), j = i;
-        if (hive && key == KeyEvent.KEYCODE_DPAD_UP && it.row == 0 && !favViews.isEmpty()) {
+        // Up from the first row, or Left past the first hex (the way back to MAIN when browsing), carries the app
+        // up to the main panels.
+        boolean toMain = (key == KeyEvent.KEYCODE_DPAD_UP && it.row == 0) || (key == KeyEvent.KEYCODE_DPAD_LEFT && i == 0);
+        if (hive && toMain && !favViews.isEmpty()) {
             startSwap();
             return;
         }

@@ -283,7 +283,8 @@ favorites and the hidden system apps are in `Kido.java`.
 ### Themed emblems
 
 The 28 apps in the catalog have an emblem: a simplified version of the app's logo, drawn in the middle of its
-panel and in place of the name on its hex. To add one for another app, put a **white emblem on a transparent
+main panel in the theme's color (the honeycomb keeps the names). Prefer the original text-only panels? Hold OK on
+Settings and turn **Logos** off. To add an emblem for another app, put a **white emblem on a transparent
 background** (no frame or box) in `app/src/main/res/drawable-nodpi/` as `emblem_<name>.png` or `.webp`,
 where `<name>` is either the app's short name from the catalog in `Kido.java` (for example
 `emblem_netflix.webp`, `emblem_prime_video.webp`) or its package name with dots turned into underscores
