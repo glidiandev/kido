@@ -1760,9 +1760,9 @@ public class KidoActivity extends Activity {
         int i = seq.indexOf(moving), n = seq.size(), j = i;
         // Up from the first row, or Left past the first hex (the way back to MAIN when browsing), carries the app
         // up to the main panels.
-        boolean toMain = (key == KeyEvent.KEYCODE_DPAD_UP && it.row == 0) || (key == KeyEvent.KEYCODE_DPAD_LEFT && i == 0);
-        if (hive && toMain && !favViews.isEmpty()) {
-            startSwap();
+        boolean up = key == KeyEvent.KEYCODE_DPAD_UP && it.row == 0, left = key == KeyEvent.KEYCODE_DPAD_LEFT && i == 0;
+        if (hive && (up || left) && !favViews.isEmpty()) {
+            startSwap(left);
             return;
         }
         if (key == KeyEvent.KEYCODE_DPAD_LEFT) j = i - 1;
@@ -1824,11 +1824,14 @@ public class KidoActivity extends Activity {
 
     private int swapAt = -1;        // while moving an app up into the main panels: the panel it would replace
 
-    /** Up from the first row while moving: KIDŌ shows the main panels and lets you pick which one to swap. */
-    private void startSwap() {
+    /**
+     * Up from the first row while moving: KIDŌ shows the main panels and lets you pick which one to swap. Up starts
+     * on the panel above the app; Left comes in from the right, on the last panel, and more Left walks along.
+     */
+    private void startSwap(boolean fromRight) {
         App app = ((Item) moving.getTag()).app;
         int x = Math.round(moving.getX() / Math.max(1f, Kido.scale));
-        swapAt = Math.max(0, Math.min(favViews.size() - 1, Math.round((x - 122) / 340f)));
+        swapAt = fromRight ? favViews.size() - 1 : Math.max(0, Math.min(favViews.size() - 1, Math.round((x - 122) / 340f)));
         moveTo(0);
         showSwap(app);
     }
