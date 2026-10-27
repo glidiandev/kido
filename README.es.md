@@ -33,7 +33,9 @@ cada app.
   de arranque al abrir una app, pitidos suaves, cuadrícula hexagonal y líneas de barrido.
 - **Movimiento fluido.** Las transiciones arrancan de inmediato y frenan suavemente; el brillo que marca
   la selección viaja en línea recta (también en diagonal) de una app a la siguiente.
-- **KIDŌ En espera.** Un protector de pantalla contra el quemado de pantalla.
+- **KIDŌ En espera.** Un protector de pantalla contra el quemado de pantalla. Actívalo en Ajustes >
+  Preferencias del dispositivo > Protector de pantalla. Si tu TV oculta ese menú, los comandos adb están en
+  el [README en inglés](README.md#screensaver).
 
 ![El panal de APLICACIONES](docs/es-apps.jpg)
 

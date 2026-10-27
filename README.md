@@ -74,6 +74,27 @@ place long enough to burn in. That matters most on OLED TVs.
 Turn it on in Settings > Device Preferences > Screen saver > **KIDŌ Standby**. It uses whichever theme
 KIDŌ is set to, and the TV starts it after the idle time you set there.
 
+**If your TV hides the Screen saver menu** (some Android TV 12 and newer sets do), turn it on with adb instead:
+
+```bash
+adb shell settings put secure screensaver_enabled 1
+adb shell settings put secure screensaver_components dev.glidian.kido/dev.glidian.kido.KidoDream
+```
+
+The idle time before it starts is usually this setting, in milliseconds (600000 is 10 minutes):
+
+```bash
+adb shell settings put system screen_off_timeout 600000
+```
+
+To go back to your TV's own screen saver, list the ones it has and set that one the same way:
+
+```bash
+adb shell cmd package query-services -a android.service.dreams.DreamService --brief
+```
+
+Thanks to [oricerro](https://github.com/oricerro) for testing these on a TCL TV ([#2](https://github.com/glidiandev/kido/issues/2)).
+
 ## Using it
 
 | Remote | What it does |
