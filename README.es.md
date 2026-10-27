@@ -14,12 +14,13 @@ cada app.
 
 ![Pantalla principal en español](docs/es-inicio.jpg)
 
-**Android TV 8.0+ · 257 KB · sin permiso de internet · español e inglés · libre y de código abierto (MIT)**
+**Android TV 8.0+ · 404 KB · sin permiso de internet · español e inglés · libre y de código abierto (MIT)**
 
 ## Qué hay en pantalla
 
-- **主要 INICIO.** Tus cinco apps favoritas como tarjetas grandes, con una barra de datos debajo: canal,
-  señal Wi-Fi real, cuándo se actualizó la app y la calidad del enlace.
+- **主要 INICIO.** Tus cinco apps favoritas como tarjetas grandes, cada una con su logo en el color del tema
+  (o solo el nombre, si apagas los logos en Ajustes), con una barra de datos debajo: canal, señal Wi-Fi
+  real, cuándo se actualizó la app y la calidad del enlace.
 - **アプリ APLICACIONES (APPS).** El resto de las apps en un panal. Siempre se ven dos filas completas;
   al bajar, el panal se desliza para que ninguna fila quede cortada, y un aviso "▲ ▼ MÁS CANALES"
   indica que hay más. La lista "ESTADO DE ENLACE" de la derecha sigue a la app seleccionada.
@@ -122,7 +123,7 @@ adb shell pm revoke dev.glidian.kido android.permission.WRITE_SECURE_SETTINGS
 | Flechas                    | Moverse. Arriba desde la primera fila de APPS vuelve a INICIO                                 |
 | OK                         | Abrir la app o la entrada                                                                    |
 | Mantener OK sobre una app  | **MOVER**, fijar en INICIO, quitar de INICIO o ver la información de la app. En la app que suena, también reproducir o pausar |
-| Mantener OK sobre Ajustes  | Sonido, botón Input, EN REPRODUCCIÓN y tema de color                                          |
+| Mantener OK sobre Ajustes  | Sonido, botón Input, EN REPRODUCCIÓN, logos y tema de color                                   |
 | Arriba desde INICIO        | El panel EN REPRODUCCIÓN, si suena algo (OK reproducir/pausa, izquierda/derecha pista, abajo volver) |
 | Atrás                      | Volver a los paneles principales                                                             |
 | Home                       | Volver a KIDŌ desde cualquier lugar, una vez que es tu pantalla de inicio                    |
@@ -132,8 +133,9 @@ adb shell pm revoke dev.glidian.kido android.permission.WRITE_SECURE_SETTINGS
 
 1. Mantén OK sobre una app y elige **MOVER**. El menú se cierra y el brillo se pone rojo y parpadea.
 2. Con las flechas la app se desplaza y las demás le hacen sitio (arriba y abajo cambian de fila en el panal).
-3. Desde la primera fila del panal, **arriba** te lleva a INICIO: con izquierda y derecha eliges cuál de
-   los cinco favoritos reemplazar, y la app que sale ocupa el lugar que dejó la que entra.
+3. Desde la primera fila del panal, **arriba** te lleva a INICIO, y también **izquierda** desde el primer
+   hexágono (empezando por el último panel): con izquierda y derecha eliges cuál de los cinco favoritos
+   reemplazar, y la app que sale ocupa el lugar que dejó la que entra.
 4. **OK** guarda el nuevo orden y **Atrás** lo cancela. El orden se conserva tras reiniciar el TV.
 
 ## Instalar

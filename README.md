@@ -10,14 +10,15 @@ no rows of recommendations, no internet access at all.
 
 *Recorded on a Sharp AQUOS 4K TV. KIDŌ (起動) means "start up".*
 
-**Android TV 8.0+ · 257 KB · no internet permission · English and Spanish · free and open source (MIT)**
+**Android TV 8.0+ · 404 KB · no internet permission · English and Spanish · free and open source (MIT)**
 
 **Try it in your browser:** [glidian.dev/kido/demo](https://glidian.dev/kido/demo/) (arrow keys and Enter are the remote)
 
 ## What's on screen
 
-- **Main panels.** Your five favorite apps as big cards, with a readout under them: channel, real
-  Wi-Fi strength, when the app last updated, and the link quality.
+- **Main panels.** Your five favorite apps as big cards, each with its logo in the theme's color (or just
+  the name, if you turn [logos](#themed-emblems) off), and a readout under them: channel, real Wi-Fi
+  strength, when the app last updated, and the link quality.
 - **Applications.** Every other app as a honeycomb that scrolls by rows, so no hex is ever cut off,
   with a link status panel listing them all.
 - **System control.** Your HDMI inputs, Wi-Fi and Settings. If a console or player on HDMI announces
@@ -80,7 +81,7 @@ KIDŌ is set to, and the TV starts it after the idle time you set there.
 | Arrows | Move around. Left and right run through everything in reading order, from the main panels through the honeycomb to Settings. Up from the honeycomb's first row goes back to the main panels |
 | OK | Open the app or input |
 | Hold OK on an app | Move it, pin it to the main panels, unpin it, or open its app info. On the app that's playing, also PLAY or PAUSE |
-| Hold OK on Settings | Sound on or off, the Input button helper, NOW PLAYING, and the color theme |
+| Hold OK on Settings | Sound on or off, the Input button helper, NOW PLAYING, logos, and the color theme |
 | Up from the main panels | The NOW PLAYING panel, when something is playing (OK play/pause, Left/Right track, Down back) |
 | Back | Return to the main panels |
 | Home | Back to KIDŌ from anywhere, once it's your Home screen |
@@ -91,8 +92,9 @@ KIDŌ is set to, and the TV starts it after the idle time you set there.
 1. Hold OK on an app and choose **MOVE**. Its glow turns red and pulses.
 2. The arrows carry it to a new place and the other apps slide over to make room. In the honeycomb, up
    and down change rows.
-3. From the honeycomb's first row, **up** takes it to the main panels: left and right pick which of the
-   five to replace, and the app that leaves takes the moved app's place in the honeycomb.
+3. From the honeycomb's first row, **up** takes it to the main panels, and so does **left** past the first
+   hex (starting on the last panel): left and right pick which of the five to replace, and the app that
+   leaves takes the moved app's place in the honeycomb.
 4. **OK** keeps the new order and **Back** cancels. The order is saved on the TV.
 
 ## Now playing (optional)
