@@ -340,4 +340,5 @@ MIT. See [LICENSE](LICENSE).
 
 ---
 
-Made by [Glidian](https://glidian.dev).
+Made by [Glidian](https://glidian.dev). Also by Glidian: [Home Deck](https://github.com/glidiandev/home-deck), a neon
+home screen for Android TV.
