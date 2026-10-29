@@ -1,20 +1,20 @@
 # 起動 KIDŌ
 
-*[Leer en español](README.es.md)*
-
 A command-center home screen for Android TV. A seven-segment clock, big Mincho kanji, a honeycomb of
 channels, live readouts and a status block that lights up in the color of whatever you're on. No ads,
 no rows of recommendations, no internet access at all.
 
-![KIDŌ running on a TV: the boot check, the main panels, then the honeycomb and the inputs](docs/kido-preview.gif)
+![KIDŌ: the boot check, the main panels with their logos, NOW PLAYING, then the honeycomb and the inputs](docs/kido-preview.gif)
 
-*Recorded on a Sharp AQUOS 4K TV. KIDŌ (起動) means "start up".*
+*KIDŌ (起動) means "start up".*
 
-**Android TV 8.0+ · 404 KB · no internet permission · English and Spanish · free and open source (MIT)**
+**Android TV 8.0+ · 404 KB · no internet permission · English and [Spanish (Leer en español)](README.es.md) · free and open source (MIT)**
 
 **Try it in your browser:** [glidian.dev/kido/demo](https://glidian.dev/kido/demo/) (arrow keys and Enter are the remote)
 
 ## What's on screen
+
+![The main panels with each app's logo in the theme's color](docs/kido-main.jpg)
 
 - **Main panels.** Your five favorite apps as big cards, each with its logo in the theme's color (or just
   the name, if you turn [logos](#themed-emblems) off), and a readout under them: channel, real Wi-Fi
@@ -125,6 +125,8 @@ the clock becomes a NOW PLAYING panel: the title, the artist and the app, how fa
 track's length on a seven-segment display (0:04 / 3:12), a play or pause mark and a small level meter,
 all in the app's color. Titles too long to fit scroll slowly, like a car stereo. When nothing
 plays, the data block comes back.
+
+![NOW PLAYING beside the clock: a Spotify track's title, artist, time and level meter in green](docs/kido-now-playing.jpg)
 
 To control it, press **Up** from the main panels: the panel lights up like any tile, **OK** plays or
 pauses, **Left** and **Right** skip to the previous or next track (when the app allows it), and **Down** or
