@@ -227,8 +227,12 @@ adb shell pm disable-user --user 0 com.google.android.tvlauncher
 adb shell pm disable-user --user 0 com.google.android.apps.tv.launcherx
 ```
 
+> [!NOTE]
+> On some Google TVs, switching the launcher off can leave you with a blank screen. To undo it, run:
+> `adb shell pm enable com.google.android.apps.tv.launcherx`
+
 > [!IMPORTANT]
-> Switching the stock launcher off is safe and easy to undo, but if you ever remove KIDŌ, turn the
+> Switching the stock launcher off is easy to undo, but if you ever remove KIDŌ, turn the
 > stock launcher back on **first**. See [Uninstall](#uninstall).
 
 > [!TIP]
