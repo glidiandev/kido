@@ -119,7 +119,7 @@ final class Kido {
 
     /**
      * What KIDŌ shows for an app: its name, a category in kanji and words, a brand color, and an optional
-     * white emblem drawn tinted on the panels and hexes (0 when there is none).
+     * white emblem drawn tinted on the main panels (0 when there is none); the honeycomb keeps the names.
      */
     static final class Look {
         final String name, kanji, category;
@@ -245,6 +245,10 @@ final class Kido {
             // Philips
             "org.droidtv.demome",
             "com.Smartdevice.emanual",
+            // TP Vision e-manual: shows as "HOW TO..." on PH9M_EA_5599 boards (50PUS7334/12).
+            // Hidden, not disabled: xtv binds its EUMService, and with it off the sources drawer
+            // opens and closes at once, so HDMI inputs stop being reachable from the remote (#6).
+            "org.droidtv.eum",
     };
 
     /**
