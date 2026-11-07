@@ -131,6 +131,8 @@ public class KidoActivity extends Activity {
     private FrameLayout alert, boot;
     private View scan;
     private TextView alertDetail, ticker, dataLabels, dataValues;
+    /** What the footer says about the focused tile. Kept out of the log ring, which the SYS-CHK tick drains. */
+    private String focusLabel = "";
     // NOW PLAYING: an opt-in panel that takes the data block's place while something plays.
     private NowPlaying nowPlaying;
     private FrameLayout npPanel;
@@ -1036,8 +1038,16 @@ public class KidoActivity extends Activity {
 
     private void showStatus(View v) {
         Item item = (Item) v.getTag();
-        if (item.app != null) log(str(R.string.log_focus, "CH." + item.app.ch + " " + item.app.look.name.toUpperCase(Locale.ROOT)));
-        else if (item.status != null) log(str(R.string.log_focus, item.status[2]));
+        // The selection is its own field rather than a line in the log ring: the ring holds three lines and
+        // the SYS-CHK tick writes into it, so a focus line was evicted within seconds and, behind a newer
+        // SYS-CHK entry, read as the previous tile.
+        String label = item.app != null
+                ? "CH." + item.app.ch + " " + item.app.look.name.toUpperCase(Locale.ROOT)
+                : item.status != null ? item.status[2] : "";
+        if (!label.equals(focusLabel)) {
+            focusLabel = label;
+            renderTicker();
+        }
         if (item.app != null) {
             App a = item.app;
             setStatus(a.look.kanji, a.look.category, a.look.name.toUpperCase(Locale.ROOT) + " // CH." + a.ch, str(R.string.ready), a.look.glow);
@@ -1971,6 +1981,7 @@ public class KidoActivity extends Activity {
             if (SystemClock.uptimeMillis() - lastLogAt > 6000) {
                 log(str(R.string.sys_check_log, ++sysCheck, new Random().nextInt(0x10000)));
             }
+            renderTicker();   // keeps the footer clock live and re-asserts the selection every second
             handler.postDelayed(this, 1000);
         }
     };
@@ -1983,18 +1994,37 @@ public class KidoActivity extends Activity {
         renderTicker();
     }
 
-    /** The footer: a live clock (it ticks every second, like the big one) and the latest log lines after it. */
+    /** The footer: a live clock, the focused selection, then the latest log line — measured to fit. */
     private void renderTicker() {
         if (ticker == null) return;
-        SpannableStringBuilder sb = new SpannableStringBuilder();
         String now = new SimpleDateFormat("HH:mm:ss", Locale.US).format(new Date());
+        String sel = focusLabel;
+        String latest = logLines.isEmpty() ? "" : logLines.get(0);
+        Paint p = ticker.getPaint();
+        float max = ticker.getWidth() > 0 ? ticker.getWidth() : Kido.px(860);
+        String head = "   ▶ " + sel;
+        String tail = latest.isEmpty() ? "" : "   //   " + latest;
+        // Drop the log line before shortening the selection, so the line never runs off the view.
+        if (p.measureText(now + head + tail) > max) tail = "";
+        if (!sel.isEmpty() && p.measureText(now + head) > max) {
+            while (sel.length() > 1 && p.measureText(now + "   ▶ " + sel + "…") > max) {
+                sel = sel.substring(0, sel.length() - 1);
+            }
+            sel = sel.trim() + "…";
+        }
+        SpannableStringBuilder sb = new SpannableStringBuilder();
         sb.append(now);
         sb.setSpan(new ForegroundColorSpan(Kido.AMBER), 0, sb.length(), 0);
-        for (int i = 0; i < logLines.size(); i++) {
-            sb.append(i == 0 ? "  " : "   //   ");
+        if (!sel.isEmpty()) {
+            sb.append("   ▶ ");
             int start = sb.length();
-            sb.append(logLines.get(i));
-            if (i == 0) sb.setSpan(new ForegroundColorSpan(Kido.INK), start, sb.length(), 0);
+            sb.append(sel);
+            sb.setSpan(new ForegroundColorSpan(Kido.INK), start, sb.length(), 0);
+        }
+        if (!tail.isEmpty()) {
+            int start = sb.length();
+            sb.append(tail);
+            sb.setSpan(new ForegroundColorSpan(Kido.DIM), start, sb.length(), 0);
         }
         ticker.setText(sb);
     }
