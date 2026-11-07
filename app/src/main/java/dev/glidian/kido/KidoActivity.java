@@ -716,7 +716,8 @@ public class KidoActivity extends Activity {
         glow = new View(this);
         glowBg = new GradientDrawable();
         glowBg.setGradientType(GradientDrawable.RADIAL_GRADIENT);
-        glowBg.setGradientRadius(Kido.px(560));
+        glowBg.setGradientRadius(Kido.px(460));   // fits inside the 1000-tall view: at 560 the falloff was
+                                                  // still opaque where the view's rectangle clipped it
         glowBg.setColors(new int[]{Kido.withAlpha(plateColor, 0.34f), 0x00000000});
         glow.setBackground(glowBg);
         place(hud, glow, 880, -320, 1300, 1000);
@@ -768,6 +769,7 @@ public class KidoActivity extends Activity {
         place(plate, plateEn, 30, 136, 470, -1);
         place(plate, new Stripes(this, 0x8C000000), 490, 0, 150, 196);
         plateHalo = new GlowView(this, Kido.px(60), false);
+        plateHalo.setSpread(0.5f);   // the plate is fixed-size, so shorten the blur instead of growing the view
         plateHalo.setColor(Kido.withAlpha(plateColor, 0.85f));
         place(hud, plateHalo, 1120, -10, 760, 316);
         place(hud, plate, 1180, 50, 640, 196);
@@ -1067,8 +1069,12 @@ public class KidoActivity extends Activity {
         GlowView g = zoneGlow[item.zone];
         FrameLayout.LayoutParams vp = (FrameLayout.LayoutParams) v.getLayoutParams();
         FrameLayout.LayoutParams gp = (FrameLayout.LayoutParams) g.getLayoutParams();
-        int pad = Kido.px(item.zone == 1 ? 40 : 34);
+        // Pad by 2x the blur radius so the halo has room to finish: the view grows, the core stays the
+        // tile, and a shadow blur spreads about twice its radius, so this is where the clipped edge was.
+        int pad = Kido.px(88);
         int lift = item.zone == 1 ? 0 : Kido.px(12);
+        g.setPad(pad);
+        g.setSpread(1f);
         if (gp.width != vp.width + pad * 2 || gp.height != vp.height + pad * 2) {
             gp.width = vp.width + pad * 2;
             gp.height = vp.height + pad * 2;
