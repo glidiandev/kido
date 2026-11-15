@@ -160,6 +160,7 @@
     <string name="log_logos_on">LOGOS SÍ</string>
     <string name="log_logos_off">LOGOS NO</string>
     <string name="log_playing">SUENA %s</string>
+    <string name="menu_restore">RESTAURAR APLICACIONES OCULTAS</string>
 
     <string name="panel_title">ENTRADAS</string>
     <string name="panel_hint">ELIGE UNA FUENTE // ATRÁS CERRAR</string>

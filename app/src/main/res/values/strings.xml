@@ -178,6 +178,8 @@
     <string name="log_logos_on">LOGOS ON</string>
     <string name="log_logos_off">LOGOS OFF</string>
     <string name="log_playing">PLAYING %s</string>
+    <string name="menu_restore">RESTORE HIDDEN APPS</string>
+
 
     <!-- Inputs panel -->
     <string name="panel_title">INPUTS</string>
