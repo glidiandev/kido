@@ -82,6 +82,7 @@
     <string name="menu_pin">FIJAR EN INICIO</string>
     <string name="menu_pin_replaces">FIJAR // REEMPLAZA A %s</string>
     <string name="menu_info">INFORMACIÓN DE LA APP</string>
+    <string name="menu_hide">OCULTAR</string>
     <string name="menu_sound_on">SONIDO ACTIVADO // DESACTIVAR</string>
     <string name="menu_sound_off">SONIDO DESACTIVADO // ACTIVAR</string>
     <string name="menu_input_on">BOTÓN INPUT: SÍ // APAGAR</string>

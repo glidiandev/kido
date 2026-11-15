@@ -93,6 +93,7 @@
     <string name="menu_pin">PIN TO MAIN</string>
     <string name="menu_pin_replaces">PIN // REPLACES %s</string>
     <string name="menu_info">APP INFO</string>
+    <string name="menu_hide">HIDE</string>
     <string name="menu_sound_on">SOUND ON // TURN OFF</string>
     <string name="menu_sound_off">SOUND OFF // TURN ON</string>
     <string name="menu_input_on">INPUT BUTTON: ON // TURN OFF</string>

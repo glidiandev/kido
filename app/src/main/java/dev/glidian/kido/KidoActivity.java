@@ -60,6 +60,9 @@ import java.util.Map;
 import java.util.Random;
 import java.util.function.Consumer;
 
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * KIDŌ home screen. The screen is a big board with three sections (main panels, a honeycomb of the
  * other apps, inputs and settings). Moving between sections pans the board and the new section draws
@@ -1559,6 +1562,7 @@ public class KidoActivity extends Activity {
         if (nowPlaying.active() && app.pkg.equals(nowPlaying.packageName())) {
             rows.add(new String[]{"再生", str(nowPlaying.playing() ? R.string.menu_pause : R.string.menu_play), "playpause"});
         }
+        rows.add(new String[]{"隠蔽", str(R.string.menu_hide), "hide"});
         if (pinned ? pins.size() > 1 : hexViews.size() > 1) rows.add(new String[]{"移動", str(R.string.menu_move), "move"});
         if (pinned) {
             rows.add(new String[]{"解除", str(R.string.menu_unpin), "unpin"});
@@ -1712,6 +1716,12 @@ public class KidoActivity extends Activity {
                 if (pins.size() >= 5) pins.remove(pins.size() - 1);
                 pins.add(app.pkg);
                 break;
+            case "hide":
+            	closeMenu();
+            	setAppHidden(app.pkg, true);
+            	log("HIDDEN // " + app.look.name.toUpperCase(Locale.ROOT));
+            	rebuild(null);
+            	return;
             default:
                 closeMenu();
                 open(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + app.pkg)));
