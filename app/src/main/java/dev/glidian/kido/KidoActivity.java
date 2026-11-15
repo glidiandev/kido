@@ -279,14 +279,30 @@ public class KidoActivity extends Activity {
         root.post(() -> intro(zone));
     }
 
+    private Set<String> userHiddenApps() {
+    	return new HashSet<>(prefs.getStringSet("hidden_apps", Collections.emptySet()));
+    }
+    
+    private void setAppHidden(String pkg, boolean hidden) {
+    	Set<String> apps = userHiddenApps();
+    	if (hidden) {
+    		apps.add(pkg);
+    	} else {
+    		apps.remove(pkg);
+    	}
+    	prefs.edit().putStringSet("hidden_apps", apps).apply();
+    }
+
+
     private List<App> loadApps() {
         PackageManager pm = getPackageManager();
         Intent probe = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER);
         List<App> out = new ArrayList<>();
         List<String> hidden = Arrays.asList(Kido.HIDDEN);
+        Set<String> userHidden = userHiddenApps();
         for (ResolveInfo ri : pm.queryIntentActivities(probe, 0)) {
             String pkg = ri.activityInfo.packageName;
-            if (pkg.equals(getPackageName()) || hidden.contains(pkg)) continue;
+            if (pkg.equals(getPackageName()) || hidden.contains(pkg) || userHidden.contains(pkg)) continue;
             Intent i = pm.getLeanbackLaunchIntentForPackage(pkg);
             if (i == null) continue;
             String label = String.valueOf(ri.loadLabel(pm));
