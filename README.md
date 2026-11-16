@@ -344,5 +344,5 @@ MIT. See [LICENSE](LICENSE).
 
 ---
 
-Made by [Glidian](https://glidian.dev). Also by Glidian: [Home Deck](https://github.com/glidiandev/home-deck), a neon
-home screen for Android TV.
+Made by [Glidian](https://glidian.dev). Also by Glidian: [Backlog](https://github.com/glidiandev/backlog), a Steam Deck screensaver made from your own games,
+and [Home Deck](https://github.com/glidiandev/home-deck), a neon home screen for Android TV.
